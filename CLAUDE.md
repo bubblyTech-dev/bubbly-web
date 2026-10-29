@@ -6,9 +6,11 @@ Super-admin console is a separate repo (`../bubbly-admin`); do not build admin f
 Scope: `../School_Management_System_Web_SOW_SaaS_Preschool_Draft.pdf`.
 
 ## Commands
+
 Node 24 (`.nvmrc`), npm only. `npm run dev` (port 3001), `npm run build`, `npm run check` (typecheck + lint + prettier), `npm run audit:prod`.
 
 ## Conventions
+
 - Absolute imports via `@/` (= `src/`). Routes only in `src/app`; logic in `features/`, `services/`, `lib/`.
 - Tokens only in `src/styles/tokens.css`; theme roles in `src/styles/themes/`. Do not hard-code colors.
 - Tailwind for layout, SCSS BEM for reusable components. SCSS partials use `@use '../abstracts' as *;`.

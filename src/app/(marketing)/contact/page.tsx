@@ -8,7 +8,7 @@ export default function ContactPage() {
   return (
     <Container className="py-16">
       <h1>Contact</h1>
-      <p className="text-muted mt-3">Inquiry form goes here.</p>
+      <p className="mt-3 text-muted">Inquiry form goes here.</p>
     </Container>
   );
 }

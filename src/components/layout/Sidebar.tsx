@@ -12,7 +12,7 @@ export function Sidebar() {
           <Link
             key={item.href}
             href={item.href}
-            className="hover:bg-surface-muted rounded-md px-3 py-2 text-sm no-underline"
+            className="rounded-md px-3 py-2 text-sm no-underline hover:bg-surface-muted"
           >
             {item.label}
           </Link>

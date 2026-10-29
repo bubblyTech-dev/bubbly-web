@@ -8,7 +8,7 @@ export default function PricingPage() {
   return (
     <Container className="py-16">
       <h1>Pricing</h1>
-      <p className="text-muted mt-3">Plans will be loaded from the backend.</p>
+      <p className="mt-3 text-muted">Plans will be loaded from the backend.</p>
     </Container>
   );
 }

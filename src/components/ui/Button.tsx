@@ -15,7 +15,12 @@ interface BaseProps {
 type ButtonProps = BaseProps & ComponentProps<'button'> & { href?: undefined };
 type LinkButtonProps = BaseProps & Omit<ComponentProps<typeof Link>, 'href'> & { href: string };
 
-function classes({ variant = 'primary', size = 'md', block, className }: BaseProps & { className?: string }) {
+function classes({
+  variant = 'primary',
+  size = 'md',
+  block,
+  className,
+}: BaseProps & { className?: string }) {
   return cn('btn', `btn--${variant}`, `btn--${size}`, block && 'btn--block', className);
 }
 

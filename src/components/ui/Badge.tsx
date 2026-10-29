@@ -7,5 +7,7 @@ interface BadgeProps extends ComponentProps<'span'> {
 }
 
 export function Badge({ tone = 'default', className, ...rest }: BadgeProps) {
-  return <span className={cn('badge', tone !== 'default' && `badge--${tone}`, className)} {...rest} />;
+  return (
+    <span className={cn('badge', tone !== 'default' && `badge--${tone}`, className)} {...rest} />
+  );
 }

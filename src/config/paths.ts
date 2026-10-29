@@ -9,5 +9,13 @@ export const paths = {
   },
   workspace: {
     dashboard: '/dashboard',
+    inquiries: '/inquiries',
+    fees: '/fees',
+    classes: '/classes',
+    leave: '/leave',
+    teachers: '/teachers',
+    calendar: '/calendar',
+    chat: '/chat',
+    profile: '/profile',
   },
 } as const;
