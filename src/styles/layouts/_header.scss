@@ -1,0 +1,36 @@
+@use '../abstracts' as *;
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border-bottom: 1px solid sem('border');
+  background-color: sem('background');
+
+  &__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 4rem;
+  }
+
+  &__nav {
+    display: none;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 0.9375rem;
+
+    @include up('md') {
+      display: flex;
+    }
+  }
+
+  &__link {
+    color: sem('muted');
+    text-decoration: none;
+
+    &:hover {
+      color: sem('foreground');
+    }
+  }
+}

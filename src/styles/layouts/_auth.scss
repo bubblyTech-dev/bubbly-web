@@ -1,0 +1,14 @@
+@use '../abstracts' as *;
+
+.auth-shell {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  background-color: sem('surface-muted');
+  padding: 1.5rem 1rem;
+
+  &__panel {
+    width: 100%;
+    max-width: 26rem;
+  }
+}

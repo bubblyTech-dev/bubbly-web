@@ -1,0 +1,15 @@
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bb-background: var(--color-ink-900);
+  --bb-surface: var(--color-ink-800);
+  --bb-surface-muted: var(--color-ink-700);
+  --bb-border: var(--color-ink-700);
+  --bb-foreground: #ffffff;
+  --bb-muted: var(--color-ink-300);
+  --bb-primary: #ffffff;
+  --bb-primary-foreground: var(--color-ink-900);
+  --bb-accent: var(--color-brand-400);
+  --bb-accent-foreground: var(--color-ink-900);
+  --bb-ring: var(--color-brand-400);
+}

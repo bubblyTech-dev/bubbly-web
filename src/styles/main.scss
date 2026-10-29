@@ -1,0 +1,14 @@
+// SCSS entry. Everything is emitted into Tailwind's cascade layers
+// so that Tailwind utility classes always override these styles.
+@use 'sass:meta';
+
+@layer base {
+  @include meta.load-css('themes');
+  @include meta.load-css('base');
+}
+
+@layer components {
+  @include meta.load-css('components');
+  @include meta.load-css('layouts');
+  @include meta.load-css('pages');
+}

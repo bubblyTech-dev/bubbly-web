@@ -1,0 +1,15 @@
+:root {
+  color-scheme: light;
+
+  --bb-background: #ffffff;
+  --bb-surface: #ffffff;
+  --bb-surface-muted: var(--color-ink-50);
+  --bb-border: var(--color-ink-200);
+  --bb-foreground: var(--color-ink-900);
+  --bb-muted: var(--color-ink-500);
+  --bb-primary: var(--color-ink-900);
+  --bb-primary-foreground: #ffffff;
+  --bb-accent: var(--color-brand-500);
+  --bb-accent-foreground: #ffffff;
+  --bb-ring: var(--color-brand-500);
+}

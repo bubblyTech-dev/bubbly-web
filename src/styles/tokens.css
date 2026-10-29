@@ -1,0 +1,76 @@
+/*
+ * DESIGN TOKENS (single source of truth)
+ * ----------------------------------------------------------------------------
+ * 1. @theme            -> raw palette, fonts, radii, shadows, breakpoints.
+ *                         Tailwind generates utilities AND exposes them as CSS variables,
+ *                         so SCSS can read them with var(--color-brand-500) etc.
+ * 2. @theme inline     -> semantic roles that point at the light/dark runtime variables
+ *                         defined in styles/themes/*.scss (--bb-*).
+ *
+ * Values below are PLACEHOLDERS until the Figma design is finalised.
+ */
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand (placeholder) */
+  --color-brand-50: #fff7ed;
+  --color-brand-100: #ffedd5;
+  --color-brand-200: #fed7aa;
+  --color-brand-300: #fdba74;
+  --color-brand-400: #fb923c;
+  --color-brand-500: #f97316;
+  --color-brand-600: #ea580c;
+  --color-brand-700: #c2410c;
+  --color-brand-800: #9a3412;
+  --color-brand-900: #7c2d12;
+
+  /* Ink / neutral (placeholder) */
+  --color-ink-50: #f7f7f7;
+  --color-ink-100: #efefef;
+  --color-ink-200: #e0e0e0;
+  --color-ink-300: #c4c4c4;
+  --color-ink-400: #9a9a9a;
+  --color-ink-500: #737373;
+  --color-ink-600: #525252;
+  --color-ink-700: #3a3a3a;
+  --color-ink-800: #1f1f1f;
+  --color-ink-900: #0a0a0a;
+
+  /* Status */
+  --color-success-500: #16a34a;
+  --color-warning-500: #d97706;
+  --color-danger-500: #dc2626;
+  --color-info-500: #2563eb;
+
+  /* Shape */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 4px 16px rgb(0 0 0 / 0.06);
+
+  /* Breakpoints (mirrored in styles/abstracts/_breakpoints.scss) */
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+  --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+  --breakpoint-2xl: 96rem;
+}
+
+@theme inline {
+  --color-background: var(--bb-background);
+  --color-surface: var(--bb-surface);
+  --color-surface-muted: var(--bb-surface-muted);
+  --color-border: var(--bb-border);
+  --color-foreground: var(--bb-foreground);
+  --color-muted: var(--bb-muted);
+  --color-primary: var(--bb-primary);
+  --color-primary-foreground: var(--bb-primary-foreground);
+  --color-accent: var(--bb-accent);
+  --color-accent-foreground: var(--bb-accent-foreground);
+  --color-ring: var(--bb-ring);
+}

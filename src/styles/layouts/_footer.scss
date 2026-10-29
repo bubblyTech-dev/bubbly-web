@@ -1,0 +1,9 @@
+@use '../abstracts' as *;
+
+.site-footer {
+  margin-top: 4rem;
+  border-top: 1px solid sem('border');
+  padding-block: 2rem;
+  color: sem('muted');
+  font-size: 0.875rem;
+}

@@ -1,0 +1,28 @@
+@use '../abstracts' as *;
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: radius('pill');
+  background-color: sem('primary');
+  padding: 0.25rem 0.625rem;
+  color: sem('primary-foreground');
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+
+  &--success {
+    background-color: palette('success-500');
+    color: #fff;
+  }
+
+  &--warning {
+    background-color: palette('warning-500');
+    color: #fff;
+  }
+
+  &--danger {
+    background-color: palette('danger-500');
+    color: #fff;
+  }
+}

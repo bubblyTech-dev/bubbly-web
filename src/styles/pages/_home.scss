@@ -1,0 +1,16 @@
+@use '../abstracts' as *;
+
+.home-hero {
+  padding-block: 4rem;
+
+  @include up('md') {
+    padding-block: 6rem;
+  }
+
+  &__lead {
+    max-width: 40rem;
+    margin-top: 1rem;
+    color: sem('muted');
+    font-size: 1.125rem;
+  }
+}

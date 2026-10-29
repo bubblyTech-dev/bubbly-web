@@ -1,0 +1,85 @@
+@use '../abstracts' as *;
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: radius('pill');
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    opacity 150ms ease;
+
+  &:disabled,
+  &[aria-disabled='true'] {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  // sizes
+  &--sm {
+    height: 2rem;
+    padding-inline: 0.875rem;
+    font-size: 0.8125rem;
+  }
+
+  &--md {
+    height: 2.5rem;
+    padding-inline: 1.25rem;
+    font-size: 0.875rem;
+  }
+
+  &--lg {
+    height: 3rem;
+    padding-inline: 1.75rem;
+    font-size: 1rem;
+  }
+
+  // variants
+  &--primary {
+    background-color: sem('primary');
+    color: sem('primary-foreground');
+
+    &:hover {
+      opacity: 0.88;
+    }
+  }
+
+  &--accent {
+    background-color: sem('accent');
+    color: sem('accent-foreground');
+
+    &:hover {
+      opacity: 0.9;
+    }
+  }
+
+  &--outline {
+    border-color: sem('border');
+    background-color: transparent;
+    color: sem('foreground');
+
+    &:hover {
+      background-color: sem('surface-muted');
+    }
+  }
+
+  &--ghost {
+    background-color: transparent;
+    color: sem('foreground');
+
+    &:hover {
+      background-color: sem('surface-muted');
+    }
+  }
+
+  &--block {
+    width: 100%;
+  }
+}

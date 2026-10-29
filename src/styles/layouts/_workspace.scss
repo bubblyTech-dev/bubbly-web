@@ -1,0 +1,31 @@
+@use '../abstracts' as *;
+
+// App shell for the logged-in school workspace (sidebar + content).
+.workspace {
+  display: grid;
+  min-height: 100dvh;
+  grid-template-columns: 1fr;
+
+  @include up('lg') {
+    grid-template-columns: 16rem 1fr;
+  }
+
+  &__sidebar {
+    display: none;
+    border-right: 1px solid sem('border');
+    background-color: sem('surface');
+    padding: 1.25rem;
+
+    @include up('lg') {
+      display: block;
+    }
+  }
+
+  &__main {
+    padding: 1.5rem 1rem;
+
+    @include up('md') {
+      padding: 2rem;
+    }
+  }
+}
