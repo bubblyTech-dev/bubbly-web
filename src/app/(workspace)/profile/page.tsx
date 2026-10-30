@@ -20,11 +20,11 @@ export default function ProfilePage() {
   return (
     <div className="animate-in fade-in space-y-6 duration-300">
       {/* Breadcrumbs */}
-      <Breadcrumbs items={[{ label: 'School Profile & Settings' }]} />
+      <Breadcrumbs items={[{ label: 'Profile' }]} />
 
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl">
-          Preschool Profile & Settings
+          Profile
         </h1>
         <p className="mt-1 text-xs text-gray-500 sm:text-sm">
           Manage school configuration, subscription entitlements, and principal administrator

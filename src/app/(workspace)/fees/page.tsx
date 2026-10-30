@@ -220,7 +220,7 @@ export default function FeeManagePage() {
       </div>
 
       {/* Class Filter Pills (Matching Figma Screen 4) */}
-      <div className="flex flex-wrap items-center gap-2 pt-2">
+      <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pt-2 pb-1 sm:flex-wrap">
         {classPills.map((cls) => {
           const isActive = selectedClass.toLowerCase() === cls.toLowerCase();
           return (
@@ -228,7 +228,7 @@ export default function FeeManagePage() {
               key={cls}
               type="button"
               onClick={() => setSelectedClass(cls)}
-              className={`rounded-full px-5 py-2 text-xs font-semibold capitalize transition-all sm:text-sm ${
+              className={`shrink-0 rounded-full px-5 py-2 text-xs font-semibold capitalize transition-all sm:text-sm ${
                 isActive
                   ? 'bg-black text-white shadow-xs'
                   : 'border border-gray-300 bg-white text-gray-800 hover:border-black hover:bg-gray-50'
@@ -270,7 +270,7 @@ export default function FeeManagePage() {
       </div>
 
       {/* Student Fee Records Table (Matching Figma Screen 4) */}
-      <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-2xs">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xs">
         {filteredRecords.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-sm font-medium text-gray-500">
@@ -278,68 +278,145 @@ export default function FeeManagePage() {
             </p>
           </div>
         ) : (
-          <table className="w-full text-left text-sm">
-            <tbody className="divide-y divide-gray-100">
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full min-w-[680px] text-left text-sm">
+                <tbody className="divide-y divide-gray-100">
+                  {filteredRecords.map((record) => (
+                    <tr key={record.id} className="group transition-colors hover:bg-gray-50/70">
+                      {/* Student Name */}
+                      <td className="py-4 pr-3 pl-4 font-bold text-gray-900 group-hover:text-black sm:pl-6">
+                        {record.name}
+                      </td>
+
+                      {/* Term */}
+                      <td className="px-3 py-4 text-xs font-medium text-gray-600">{record.term}</td>
+
+                      {/* Total Amount */}
+                      <td className="px-3 py-4 font-mono text-xs text-gray-700">
+                        Total amount : ₹{record.totalAmount}
+                      </td>
+
+                      {/* Paid Amount */}
+                      <td className="px-3 py-4 font-mono text-xs font-semibold text-emerald-700">
+                        paid amount : ₹{record.paidAmount}
+                      </td>
+
+                      {/* Pending Amount */}
+                      <td className="px-3 py-4 font-mono text-xs font-semibold text-rose-600">
+                        Pending amount : ₹{record.pendingAmount}
+                      </td>
+
+                      {/* Action Buttons: Download receipt, Reminder, Collected (Matching Figma Screen 4) */}
+                      <td className="py-4 pr-4 pl-3 text-right sm:pr-6">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setActiveReceiptRecord(record)}
+                            className="rounded-full bg-black px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-gray-800 active:scale-95"
+                          >
+                            Download receipt
+                          </button>
+
+                          {record.status === 'Pending' && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleSendReminder(record)}
+                                className="rounded-full bg-black px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-gray-800 active:scale-95"
+                              >
+                                Reminder
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMarkCollected(record.id)}
+                                className="rounded-full bg-black px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-gray-800 active:scale-95"
+                              >
+                                Collected
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="divide-y divide-gray-100 sm:hidden">
               {filteredRecords.map((record) => (
-                <tr key={record.id} className="group transition-colors hover:bg-gray-50/70">
-                  {/* Student Name */}
-                  <td className="py-4 pr-3 pl-4 font-bold text-gray-900 group-hover:text-black sm:pl-6">
-                    {record.name}
-                  </td>
-
-                  {/* Term */}
-                  <td className="px-3 py-4 text-xs font-medium text-gray-600">{record.term}</td>
-
-                  {/* Total Amount */}
-                  <td className="px-3 py-4 font-mono text-xs text-gray-700">
-                    Total amount : ₹{record.totalAmount}
-                  </td>
-
-                  {/* Paid Amount */}
-                  <td className="px-3 py-4 font-mono text-xs font-semibold text-emerald-700">
-                    paid amount : ₹{record.paidAmount}
-                  </td>
-
-                  {/* Pending Amount */}
-                  <td className="px-3 py-4 font-mono text-xs font-semibold text-rose-600">
-                    Pending amount : ₹{record.pendingAmount}
-                  </td>
-
-                  {/* Action Buttons: Download receipt, Reminder, Collected (Matching Figma Screen 4) */}
-                  <td className="py-4 pr-4 pl-3 text-right sm:pr-6">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setActiveReceiptRecord(record)}
-                        className="rounded-full bg-black px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-gray-800 active:scale-95"
-                      >
-                        Download receipt
-                      </button>
-
-                      {record.status === 'Pending' && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleSendReminder(record)}
-                            className="rounded-full bg-black px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-gray-800 active:scale-95"
-                          >
-                            Reminder
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMarkCollected(record.id)}
-                            className="rounded-full bg-black px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-gray-800 active:scale-95"
-                          >
-                            Collected
-                          </button>
-                        </>
-                      )}
+                <div key={record.id} className="space-y-3 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-bold text-gray-900">{record.name}</div>
+                      <div className="text-xs text-gray-500">
+                        {record.term} · {record.classType}
+                      </div>
                     </div>
-                  </td>
-                </tr>
+                    <span
+                      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+                        record.status === 'Completed'
+                          ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                          : 'border border-amber-200 bg-amber-50 text-amber-700'
+                      }`}
+                    >
+                      {record.status}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 rounded-xl bg-gray-50 p-2.5 text-center text-xs">
+                    <div>
+                      <div className="text-[10px] text-gray-400">Total</div>
+                      <div className="font-mono font-bold text-gray-800">₹{record.totalAmount}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-gray-400">Paid</div>
+                      <div className="font-mono font-bold text-emerald-600">
+                        ₹{record.paidAmount}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-gray-400">Pending</div>
+                      <div className="font-mono font-bold text-rose-600">
+                        ₹{record.pendingAmount}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setActiveReceiptRecord(record)}
+                      className="flex-1 rounded-full border border-gray-300 bg-white py-2 text-center text-xs font-semibold text-gray-800 shadow-2xs transition active:scale-95"
+                    >
+                      Receipt
+                    </button>
+                    {record.status === 'Pending' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleSendReminder(record)}
+                          className="flex-1 rounded-full bg-black py-2 text-center text-xs font-semibold text-white shadow-2xs transition active:scale-95"
+                        >
+                          Reminder
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMarkCollected(record.id)}
+                          className="flex-1 rounded-full bg-black py-2 text-center text-xs font-semibold text-white shadow-2xs transition active:scale-95"
+                        >
+                          Collected
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
 

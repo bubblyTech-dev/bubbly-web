@@ -160,7 +160,7 @@ export default function InquiriesPage() {
       </div>
 
       {/* Status Filter Pills (Matching Figma Screen 2) */}
-      <div className="flex flex-wrap items-center gap-2 pt-1">
+      <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pt-1 pb-1 sm:flex-wrap">
         {statusOptions.map((status) => {
           const isActive = selectedStatus === status;
           const count = enquiries.filter((e) => e.status === status).length;
@@ -170,7 +170,7 @@ export default function InquiriesPage() {
               key={status}
               type="button"
               onClick={() => setSelectedStatus(status)}
-              className={`rounded-full px-5 py-2 text-xs font-semibold transition-all sm:text-sm ${
+              className={`shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition-all sm:text-sm ${
                 isActive
                   ? 'bg-black text-white shadow-xs'
                   : 'border border-gray-300 bg-white text-gray-800 hover:border-black hover:bg-gray-50'
@@ -194,7 +194,7 @@ export default function InquiriesPage() {
       {/* Secondary Filter Tabs & Download Button (Matching Figma Screen 2) */}
       <div className="flex flex-col gap-3 border-b border-gray-200/80 pb-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Class Tabs */}
-        <div className="flex items-center gap-6 overflow-x-auto text-sm font-medium">
+        <div className="no-scrollbar flex items-center gap-6 overflow-x-auto pb-1 text-sm font-medium">
           {classOptions.map((cls) => {
             const isActive = selectedClass === cls;
             return (
@@ -202,7 +202,7 @@ export default function InquiriesPage() {
                 key={cls}
                 type="button"
                 onClick={() => setSelectedClass(cls)}
-                className={`relative py-1 capitalize transition-colors ${
+                className={`relative shrink-0 py-1 capitalize transition-colors ${
                   isActive ? 'font-bold text-black' : 'text-gray-500 hover:text-black'
                 }`}
               >
@@ -227,7 +227,7 @@ export default function InquiriesPage() {
       </div>
 
       {/* Table / List View (Matching Figma Screen 2) */}
-      <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-2xs">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xs">
         {filteredEnquiries.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-sm font-medium text-gray-500">
@@ -244,87 +244,185 @@ export default function InquiriesPage() {
             </button>
           </div>
         ) : (
-          <table className="w-full text-left text-sm">
-            <tbody className="divide-y divide-gray-100">
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full min-w-[620px] text-left text-sm">
+                <tbody className="divide-y divide-gray-100">
+                  {filteredEnquiries.map((enquiry) => (
+                    <tr key={enquiry.id} className="group transition-colors hover:bg-gray-50/70">
+                      {/* Name & Relation */}
+                      <td className="py-4 pr-3 pl-4 sm:pl-6">
+                        <div className="font-bold text-gray-900 group-hover:text-black">
+                          {enquiry.name}
+                        </div>
+                        <div className="text-xs text-gray-500">{enquiry.relation}</div>
+                      </td>
+
+                      {/* Class */}
+                      <td className="px-3 py-4 text-xs font-medium text-gray-700 capitalize">
+                        {enquiry.classType}
+                      </td>
+
+                      {/* Phone */}
+                      <td className="px-3 py-4 font-mono text-xs text-gray-700">
+                        <a
+                          href={`tel:${enquiry.phone}`}
+                          className="flex items-center gap-1 hover:underline"
+                        >
+                          {enquiry.phone}
+                        </a>
+                      </td>
+
+                      {/* Email */}
+                      <td className="px-3 py-4 text-xs text-gray-600">
+                        <a
+                          href={`mailto:${enquiry.email}`}
+                          className="block max-w-[200px] truncate hover:underline"
+                        >
+                          {enquiry.email}
+                        </a>
+                      </td>
+
+                      {/* Date */}
+                      <td className="px-3 py-4 font-mono text-xs text-gray-500">{enquiry.date}</td>
+
+                      {/* Action Icons & Move Button */}
+                      <td className="py-4 pr-4 pl-3 text-right sm:pr-6">
+                        <div className="relative flex items-center justify-end gap-2">
+                          {/* Note / Details Icon */}
+                          <button
+                            type="button"
+                            onClick={() => setActiveNotesEnquiry(enquiry)}
+                            aria-label="View notes"
+                            className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-black"
+                            title="View Enquiry Notes"
+                          >
+                            <FileText className="h-4 w-4" />
+                          </button>
+
+                          {/* Sliders / Action Icon */}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setMoveMenuEnquiryId(
+                                moveMenuEnquiryId === enquiry.id ? null : enquiry.id,
+                              )
+                            }
+                            aria-label="Settings"
+                            className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-black"
+                            title="Change Status"
+                          >
+                            <SlidersHorizontal className="h-4 w-4" />
+                          </button>
+
+                          {/* Move Button */}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setMoveMenuEnquiryId(
+                                moveMenuEnquiryId === enquiry.id ? null : enquiry.id,
+                              )
+                            }
+                            className="rounded-full bg-black px-4 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-gray-800 active:scale-95"
+                          >
+                            Move
+                          </button>
+
+                          {/* Move Status Popover Menu */}
+                          {moveMenuEnquiryId === enquiry.id && (
+                            <div className="animate-in fade-in zoom-in-95 absolute top-10 right-0 z-30 w-44 rounded-xl border border-gray-100 bg-white p-2 text-left shadow-xl">
+                              <div className="px-2 py-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
+                                Move Status To
+                              </div>
+                              {statusOptions.map((st) => (
+                                <button
+                                  key={st}
+                                  type="button"
+                                  onClick={() =>
+                                    handleMoveStatus(enquiry.id, st as Enquiry['status'])
+                                  }
+                                  className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs transition ${
+                                    enquiry.status === st
+                                      ? 'bg-black font-semibold text-white'
+                                      : 'text-gray-700 hover:bg-gray-100'
+                                  }`}
+                                >
+                                  <span>{st}</span>
+                                  {enquiry.status === st && <Check className="h-3 w-3" />}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card-Based Native View */}
+            <div className="divide-y divide-gray-100 sm:hidden">
               {filteredEnquiries.map((enquiry) => (
-                <tr key={enquiry.id} className="group transition-colors hover:bg-gray-50/70">
-                  {/* Name & Relation */}
-                  <td className="py-4 pr-3 pl-4 sm:pl-6">
-                    <div className="font-bold text-gray-900 group-hover:text-black">
-                      {enquiry.name}
+                <div key={enquiry.id} className="space-y-3 p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-bold text-gray-900">{enquiry.name}</div>
+                      <div className="text-xs text-gray-500">
+                        {enquiry.relation} ·{' '}
+                        <span className="font-semibold text-gray-700 capitalize">
+                          {enquiry.classType}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">{enquiry.relation}</div>
-                  </td>
+                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-bold text-gray-800">
+                      {enquiry.status}
+                    </span>
+                  </div>
 
-                  {/* Class */}
-                  <td className="px-3 py-4 text-xs font-medium text-gray-700 capitalize">
-                    {enquiry.classType}
-                  </td>
-
-                  {/* Phone */}
-                  <td className="px-3 py-4 font-mono text-xs text-gray-700">
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
                     <a
                       href={`tel:${enquiry.phone}`}
-                      className="flex items-center gap-1 hover:underline"
+                      className="flex items-center gap-1 font-mono font-medium text-gray-900 hover:underline"
                     >
-                      {enquiry.phone}
+                      <Phone className="h-3 w-3 text-gray-400" />
+                      <span>{enquiry.phone}</span>
                     </a>
-                  </td>
+                    <span className="text-gray-300">·</span>
+                    <span className="font-mono text-gray-400">{enquiry.date}</span>
+                  </div>
 
-                  {/* Email */}
-                  <td className="px-3 py-4 text-xs text-gray-600">
-                    <a
-                      href={`mailto:${enquiry.email}`}
-                      className="block max-w-[200px] truncate hover:underline"
+                  {enquiry.notes && (
+                    <p className="line-clamp-2 text-xs text-gray-500 italic">
+                      &ldquo;{enquiry.notes}&rdquo;
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-between gap-2 border-t border-gray-100 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveNotesEnquiry(enquiry)}
+                      className="flex items-center gap-1 rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-2xs"
                     >
-                      {enquiry.email}
-                    </a>
-                  </td>
+                      <FileText className="h-3.5 w-3.5 text-gray-500" />
+                      <span>Notes</span>
+                    </button>
 
-                  {/* Date */}
-                  <td className="px-3 py-4 font-mono text-xs text-gray-500">{enquiry.date}</td>
-
-                  {/* Action Icons & Move Button */}
-                  <td className="py-4 pr-4 pl-3 text-right sm:pr-6">
-                    <div className="relative flex items-center justify-end gap-2">
-                      {/* Note / Details Icon */}
-                      <button
-                        type="button"
-                        onClick={() => setActiveNotesEnquiry(enquiry)}
-                        aria-label="View notes"
-                        className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-black"
-                        title="View Enquiry Notes"
-                      >
-                        <FileText className="h-4 w-4" />
-                      </button>
-
-                      {/* Sliders / Action Icon */}
+                    <div className="relative">
                       <button
                         type="button"
                         onClick={() =>
                           setMoveMenuEnquiryId(moveMenuEnquiryId === enquiry.id ? null : enquiry.id)
                         }
-                        aria-label="Settings"
-                        className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-black"
-                        title="Change Status"
+                        className="flex items-center gap-1 rounded-full bg-black px-4 py-1.5 text-xs font-semibold text-white shadow-2xs active:scale-95"
                       >
-                        <SlidersHorizontal className="h-4 w-4" />
+                        <SlidersHorizontal className="h-3.5 w-3.5" />
+                        <span>Move</span>
                       </button>
 
-                      {/* Move Button */}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setMoveMenuEnquiryId(moveMenuEnquiryId === enquiry.id ? null : enquiry.id)
-                        }
-                        className="rounded-full bg-black px-4 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-gray-800 active:scale-95"
-                      >
-                        Move
-                      </button>
-
-                      {/* Move Status Popover Menu */}
                       {moveMenuEnquiryId === enquiry.id && (
-                        <div className="animate-in fade-in zoom-in-95 absolute top-10 right-0 z-30 w-44 rounded-xl border border-gray-100 bg-white p-2 text-left shadow-xl">
+                        <div className="animate-in fade-in zoom-in-95 absolute right-0 bottom-10 z-30 w-44 rounded-xl border border-gray-100 bg-white p-2 text-left shadow-xl">
                           <div className="px-2 py-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
                             Move Status To
                           </div>
@@ -332,7 +430,10 @@ export default function InquiriesPage() {
                             <button
                               key={st}
                               type="button"
-                              onClick={() => handleMoveStatus(enquiry.id, st as Enquiry['status'])}
+                              onClick={() => {
+                                handleMoveStatus(enquiry.id, st as Enquiry['status']);
+                                setMoveMenuEnquiryId(null);
+                              }}
                               className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs transition ${
                                 enquiry.status === st
                                   ? 'bg-black font-semibold text-white'
@@ -346,11 +447,11 @@ export default function InquiriesPage() {
                         </div>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
 

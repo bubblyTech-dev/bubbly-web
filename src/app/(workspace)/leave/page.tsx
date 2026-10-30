@@ -126,7 +126,7 @@ export default function LeaveManagePage() {
       </div>
 
       {/* Status Filter Pills (Matching Figma Screen 3) */}
-      <div className="flex flex-wrap items-center gap-2 pt-1">
+      <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pt-1 pb-1 sm:flex-wrap">
         {filterTabs.map((tab) => {
           const isActive = filterTab === tab;
           const count = leaves.filter((l) => {
@@ -140,7 +140,7 @@ export default function LeaveManagePage() {
               key={tab}
               type="button"
               onClick={() => setFilterTab(tab)}
-              className={`rounded-full px-5 py-2 text-xs font-semibold transition-all sm:text-sm ${
+              className={`shrink-0 rounded-full px-5 py-2 text-xs font-semibold transition-all sm:text-sm ${
                 isActive
                   ? 'bg-black text-white shadow-xs'
                   : 'border border-gray-300 bg-white text-gray-800 hover:border-black hover:bg-gray-50'
@@ -162,7 +162,7 @@ export default function LeaveManagePage() {
       </div>
 
       {/* List / Table of Leave Requests (Matching Figma Screen 3) */}
-      <div className="overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-2xs">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xs">
         {filteredLeaves.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-sm font-medium text-gray-500">
@@ -170,53 +170,119 @@ export default function LeaveManagePage() {
             </p>
           </div>
         ) : (
-          <table className="w-full text-left text-sm">
-            <tbody className="divide-y divide-gray-100">
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full min-w-[620px] text-left text-sm">
+                <tbody className="divide-y divide-gray-100">
+                  {filteredLeaves.map((leave) => (
+                    <tr key={leave.id} className="group transition-colors hover:bg-gray-50/70">
+                      {/* Avatar Circle */}
+                      <td className="w-12 py-4 pr-3 pl-4 sm:pl-6">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#E5E7EB] text-sm font-bold text-gray-600 shadow-inner">
+                          {leave.name
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')}
+                        </div>
+                      </td>
+
+                      {/* Name & Role */}
+                      <td className="px-3 py-4">
+                        <div className="font-bold text-gray-900 group-hover:text-black">
+                          {leave.name}
+                        </div>
+                        <div className="text-xs text-gray-500">{leave.role}</div>
+                      </td>
+
+                      {/* Leave Type */}
+                      <td className="px-3 py-4 text-xs font-medium text-gray-700">
+                        {leave.leaveType}
+                      </td>
+
+                      {/* Dates */}
+                      <td className="px-3 py-4 font-mono text-xs text-gray-700">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                          {leave.dates}
+                        </span>
+                      </td>
+
+                      {/* Duration */}
+                      <td className="px-3 py-4 font-mono text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5 text-gray-400" />
+                          {leave.duration}
+                        </span>
+                      </td>
+
+                      {/* Status Badge */}
+                      <td className="px-3 py-4">
+                        <span
+                          className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold ${
+                            leave.status === 'Pending'
+                              ? 'bg-gray-100 text-gray-600'
+                              : leave.status === 'Approved'
+                                ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                                : 'border border-rose-200 bg-rose-50 text-rose-700'
+                          }`}
+                        >
+                          {leave.status}
+                        </span>
+                      </td>
+
+                      {/* Action Buttons: Reject & Accept (Matching Figma Screen 3) */}
+                      <td className="py-4 pr-4 pl-3 text-right sm:pr-6">
+                        {leave.status === 'Pending' ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setRejectModalId(leave.id)}
+                              className="rounded-full bg-black px-4 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-gray-800 active:scale-95"
+                            >
+                              Reject
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleAccept(leave.id)}
+                              className="rounded-full bg-black px-4 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-gray-800 active:scale-95"
+                            >
+                              Accept
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs font-medium text-gray-400">
+                            {leave.status === 'Approved' ? 'Approved by Brij' : 'Rejected'}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card-Based Native View */}
+            <div className="divide-y divide-gray-100 sm:hidden">
               {filteredLeaves.map((leave) => (
-                <tr key={leave.id} className="group transition-colors hover:bg-gray-50/70">
-                  {/* Avatar Circle */}
-                  <td className="w-12 py-4 pr-3 pl-4 sm:pl-6">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#E5E7EB] text-sm font-bold text-gray-600 shadow-inner">
-                      {leave.name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')}
+                <div key={leave.id} className="space-y-3 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#E5E7EB] text-xs font-bold text-gray-700 shadow-inner">
+                        {leave.name
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')}
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-gray-900">{leave.name}</div>
+                        <div className="text-xs text-gray-500">{leave.role}</div>
+                      </div>
                     </div>
-                  </td>
-
-                  {/* Name & Role */}
-                  <td className="px-3 py-4">
-                    <div className="font-bold text-gray-900 group-hover:text-black">
-                      {leave.name}
-                    </div>
-                    <div className="text-xs text-gray-500">{leave.role}</div>
-                  </td>
-
-                  {/* Leave Type */}
-                  <td className="px-3 py-4 text-xs font-medium text-gray-700">{leave.leaveType}</td>
-
-                  {/* Dates */}
-                  <td className="px-3 py-4 font-mono text-xs text-gray-700">
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                      {leave.dates}
-                    </span>
-                  </td>
-
-                  {/* Duration */}
-                  <td className="px-3 py-4 font-mono text-xs text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5 text-gray-400" />
-                      {leave.duration}
-                    </span>
-                  </td>
-
-                  {/* Status Badge */}
-                  <td className="px-3 py-4">
                     <span
-                      className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold ${
+                      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${
                         leave.status === 'Pending'
-                          ? 'bg-gray-100 text-gray-600'
+                          ? 'bg-gray-100 text-gray-700'
                           : leave.status === 'Approved'
                             ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
                             : 'border border-rose-200 bg-rose-50 text-rose-700'
@@ -224,37 +290,50 @@ export default function LeaveManagePage() {
                     >
                       {leave.status}
                     </span>
-                  </td>
+                  </div>
 
-                  {/* Action Buttons: Reject & Accept (Matching Figma Screen 3) */}
-                  <td className="py-4 pr-4 pl-3 text-right sm:pr-6">
-                    {leave.status === 'Pending' ? (
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setRejectModalId(leave.id)}
-                          className="rounded-full bg-black px-4 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-gray-800 active:scale-95"
-                        >
-                          Reject
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleAccept(leave.id)}
-                          className="rounded-full bg-black px-4 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-gray-800 active:scale-95"
-                        >
-                          Accept
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-xs font-medium text-gray-400">
-                        {leave.status === 'Approved' ? 'Approved by Brij' : 'Rejected'}
-                      </span>
-                    )}
-                  </td>
-                </tr>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-xl bg-gray-50 p-3 text-xs text-gray-600">
+                    <span className="font-semibold text-gray-800">{leave.leaveType}</span>
+                    <span className="flex items-center gap-1 font-mono">
+                      <Calendar className="h-3 w-3 text-gray-400" />
+                      {leave.dates}
+                    </span>
+                    <span className="flex items-center gap-1 font-mono">
+                      <Clock className="h-3 w-3 text-gray-400" />
+                      {leave.duration}
+                    </span>
+                  </div>
+
+                  {leave.reason && (
+                    <div className="text-xs text-gray-500 italic">&ldquo;{leave.reason}&rdquo;</div>
+                  )}
+
+                  {leave.status === 'Pending' ? (
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setRejectModalId(leave.id)}
+                        className="w-full rounded-full border border-gray-300 bg-white py-2 text-xs font-bold text-gray-800 shadow-2xs transition active:scale-95"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAccept(leave.id)}
+                        className="w-full rounded-full bg-black py-2 text-xs font-bold text-white shadow-2xs transition active:scale-95"
+                      >
+                        Accept
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-right text-xs font-medium text-gray-400">
+                      {leave.status === 'Approved' ? 'Approved by Brij' : 'Rejected'}
+                    </div>
+                  )}
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
 

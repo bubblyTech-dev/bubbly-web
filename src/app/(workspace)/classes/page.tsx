@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 import { Edit2, X, School } from 'lucide-react';
 
@@ -103,30 +104,43 @@ export default function ClassesPage() {
 
       {/* Grid of Class Cards (Matching Figma Screen 5) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {classList.map((cls) => (
-          <div
-            key={cls.id}
-            className="flex min-h-[170px] flex-col justify-between rounded-2xl bg-[#F4F5F7] p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-          >
-            <div>
-              <h2 className="text-xs font-semibold text-gray-700 capitalize">{cls.name}</h2>
-              <div className="mt-4 text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl">
-                {cls.studentCount}
+        {classList.map((cls) => {
+          const slug = cls.name.toLowerCase().replace(/\s+/g, '-');
+          return (
+            <div
+              key={cls.id}
+              className="group flex min-h-[170px] flex-col justify-between rounded-2xl bg-[#F4F5F7] p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <Link href={`/classes/${slug}`} className="block flex-1 cursor-pointer">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xs font-semibold text-gray-700 capitalize group-hover:text-black">
+                    {cls.name}
+                  </h2>
+                  <span className="text-[10px] font-semibold text-gray-400 group-hover:text-black">
+                    View Roster →
+                  </span>
+                </div>
+                <div className="mt-4 text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl">
+                  {cls.studentCount}
+                </div>
+              </Link>
+
+              <div className="mt-6 flex items-center justify-between border-t border-gray-200/60 pt-3 text-xs">
+                <span className="max-w-[130px] truncate text-gray-500">{cls.teacherName}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingClass(cls);
+                  }}
+                  className="flex cursor-pointer items-center gap-1 font-bold text-gray-900 hover:text-black hover:underline"
+                >
+                  <span>Edit</span>
+                </button>
               </div>
             </div>
-
-            <div className="mt-6 flex items-center justify-between border-t border-gray-200/60 pt-3 text-xs">
-              <span className="max-w-[130px] truncate text-gray-500">{cls.teacherName}</span>
-              <button
-                type="button"
-                onClick={() => setEditingClass(cls)}
-                className="flex cursor-pointer items-center gap-1 font-bold text-gray-900 hover:text-black hover:underline"
-              >
-                <span>Edit</span>
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         {/* "+ Add class" Card (Matching Figma Screen 5) */}
         <button
