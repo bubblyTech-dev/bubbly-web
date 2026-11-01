@@ -270,7 +270,7 @@ export default function FeeManagePage() {
       </div>
 
       {/* Student Fee Records Table (Matching Figma Screen 4) */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xs">
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-2xs">
         {filteredRecords.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-sm font-medium text-gray-500">
@@ -280,8 +280,8 @@ export default function FeeManagePage() {
         ) : (
           <>
             {/* Desktop Table View */}
-            <div className="hidden overflow-x-auto sm:block">
-              <table className="w-full min-w-[680px] text-left text-sm">
+            <div className="hidden sm:block">
+              <table className="w-full text-left text-sm">
                 <tbody className="divide-y divide-gray-100">
                   {filteredRecords.map((record) => (
                     <tr key={record.id} className="group transition-colors hover:bg-gray-50/70">

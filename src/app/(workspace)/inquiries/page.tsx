@@ -99,7 +99,7 @@ export default function InquiriesPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>('New');
   const [selectedClass, setSelectedClass] = useState<string>('All');
   const [activeNotesEnquiry, setActiveNotesEnquiry] = useState<Enquiry | null>(null);
-  const [moveMenuEnquiryId, setMoveMenuEnquiryId] = useState<string | null>(null);
+  const [activeMoveEnquiry, setActiveMoveEnquiry] = useState<Enquiry | null>(null);
 
   const statusOptions = ['New', 'Contacted', 'Follow-up', 'Converted', 'Closed'];
   const classOptions = ['All', 'Playgroup', 'Nursery', 'jr kg', 'sr kg'];
@@ -115,7 +115,7 @@ export default function InquiriesPage() {
     setEnquiries((prev) =>
       prev.map((item) => (item.id === enquiryId ? { ...item, status: newStatus } : item)),
     );
-    setMoveMenuEnquiryId(null);
+    setActiveMoveEnquiry(null);
   };
 
   const handleDownloadExcel = () => {
@@ -227,7 +227,7 @@ export default function InquiriesPage() {
       </div>
 
       {/* Table / List View (Matching Figma Screen 2) */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xs">
+      <div className="rounded-2xl border border-gray-100 bg-white shadow-2xs">
         {filteredEnquiries.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-sm font-medium text-gray-500">
@@ -246,8 +246,8 @@ export default function InquiriesPage() {
         ) : (
           <>
             {/* Desktop Table View */}
-            <div className="hidden overflow-x-auto sm:block">
-              <table className="w-full min-w-[620px] text-left text-sm">
+            <div className="hidden sm:block">
+              <table className="w-full text-left text-sm">
                 <tbody className="divide-y divide-gray-100">
                   {filteredEnquiries.map((enquiry) => (
                     <tr key={enquiry.id} className="group transition-colors hover:bg-gray-50/70">
@@ -289,7 +289,7 @@ export default function InquiriesPage() {
 
                       {/* Action Icons & Move Button */}
                       <td className="py-4 pr-4 pl-3 text-right sm:pr-6">
-                        <div className="relative flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-2">
                           {/* Note / Details Icon */}
                           <button
                             type="button"
@@ -304,12 +304,8 @@ export default function InquiriesPage() {
                           {/* Sliders / Action Icon */}
                           <button
                             type="button"
-                            onClick={() =>
-                              setMoveMenuEnquiryId(
-                                moveMenuEnquiryId === enquiry.id ? null : enquiry.id,
-                              )
-                            }
-                            aria-label="Settings"
+                            onClick={() => setActiveMoveEnquiry(enquiry)}
+                            aria-label="Change Status"
                             className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-black"
                             title="Change Status"
                           >
@@ -319,41 +315,11 @@ export default function InquiriesPage() {
                           {/* Move Button */}
                           <button
                             type="button"
-                            onClick={() =>
-                              setMoveMenuEnquiryId(
-                                moveMenuEnquiryId === enquiry.id ? null : enquiry.id,
-                              )
-                            }
+                            onClick={() => setActiveMoveEnquiry(enquiry)}
                             className="rounded-full bg-black px-4 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-gray-800 active:scale-95"
                           >
                             Move
                           </button>
-
-                          {/* Move Status Popover Menu */}
-                          {moveMenuEnquiryId === enquiry.id && (
-                            <div className="animate-in fade-in zoom-in-95 absolute top-10 right-0 z-30 w-44 rounded-xl border border-gray-100 bg-white p-2 text-left shadow-xl">
-                              <div className="px-2 py-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
-                                Move Status To
-                              </div>
-                              {statusOptions.map((st) => (
-                                <button
-                                  key={st}
-                                  type="button"
-                                  onClick={() =>
-                                    handleMoveStatus(enquiry.id, st as Enquiry['status'])
-                                  }
-                                  className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs transition ${
-                                    enquiry.status === st
-                                      ? 'bg-black font-semibold text-white'
-                                      : 'text-gray-700 hover:bg-gray-100'
-                                  }`}
-                                >
-                                  <span>{st}</span>
-                                  {enquiry.status === st && <Check className="h-3 w-3" />}
-                                </button>
-                              ))}
-                            </div>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -409,44 +375,14 @@ export default function InquiriesPage() {
                       <span>Notes</span>
                     </button>
 
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setMoveMenuEnquiryId(moveMenuEnquiryId === enquiry.id ? null : enquiry.id)
-                        }
-                        className="flex items-center gap-1 rounded-full bg-black px-4 py-1.5 text-xs font-semibold text-white shadow-2xs active:scale-95"
-                      >
-                        <SlidersHorizontal className="h-3.5 w-3.5" />
-                        <span>Move</span>
-                      </button>
-
-                      {moveMenuEnquiryId === enquiry.id && (
-                        <div className="animate-in fade-in zoom-in-95 absolute right-0 bottom-10 z-30 w-44 rounded-xl border border-gray-100 bg-white p-2 text-left shadow-xl">
-                          <div className="px-2 py-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
-                            Move Status To
-                          </div>
-                          {statusOptions.map((st) => (
-                            <button
-                              key={st}
-                              type="button"
-                              onClick={() => {
-                                handleMoveStatus(enquiry.id, st as Enquiry['status']);
-                                setMoveMenuEnquiryId(null);
-                              }}
-                              className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-xs transition ${
-                                enquiry.status === st
-                                  ? 'bg-black font-semibold text-white'
-                                  : 'text-gray-700 hover:bg-gray-100'
-                              }`}
-                            >
-                              <span>{st}</span>
-                              {enquiry.status === st && <Check className="h-3 w-3" />}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveMoveEnquiry(enquiry)}
+                      className="flex items-center gap-1 rounded-full bg-black px-4 py-1.5 text-xs font-semibold text-white shadow-2xs active:scale-95"
+                    >
+                      <SlidersHorizontal className="h-3.5 w-3.5" />
+                      <span>Move</span>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -503,6 +439,68 @@ export default function InquiriesPage() {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Move Status Modal (Never clipped by table/container) */}
+      {activeMoveEnquiry && (
+        <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
+          <div className="animate-in zoom-in-95 w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Move Status</h3>
+                <p className="text-xs text-gray-500">
+                  {activeMoveEnquiry.name} · {activeMoveEnquiry.classType}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveMoveEnquiry(null)}
+                className="rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-black"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <div className="text-[11px] font-semibold tracking-wider text-gray-400 uppercase">
+                Select New Status
+              </div>
+              {statusOptions.map((st) => {
+                const isCurrent = activeMoveEnquiry.status === st;
+                return (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => handleMoveStatus(activeMoveEnquiry.id, st as Enquiry['status'])}
+                    className={`flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold transition ${
+                      isCurrent
+                        ? 'bg-black text-white shadow-xs'
+                        : 'border border-gray-200 bg-white text-gray-700 hover:border-black hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={`h-2.5 w-2.5 rounded-full ${
+                          st === 'New'
+                            ? 'bg-blue-500'
+                            : st === 'Contacted'
+                              ? 'bg-amber-500'
+                              : st === 'Follow-up'
+                                ? 'bg-purple-500'
+                                : st === 'Converted'
+                                  ? 'bg-emerald-500'
+                                  : 'bg-gray-400'
+                        }`}
+                      />
+                      <span>{st}</span>
+                    </div>
+                    {isCurrent && <Check className="h-4 w-4" />}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
