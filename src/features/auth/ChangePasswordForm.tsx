@@ -10,11 +10,13 @@ import { paths } from '@/config/paths';
 import { ApiError, errorMessage } from '@/lib/api/errors';
 import { homeFor } from '@/lib/auth/roles';
 import { useAuth } from '@/providers/AuthProvider';
+import { useSnackbar } from '@/providers/SnackbarProvider';
 import { authService } from '@/services/auth';
 
 /** Shown when the account must change its password, and reachable from the profile pages. */
 export function ChangePasswordForm() {
   const { status, me, reload, logout } = useAuth();
+  const snackbar = useSnackbar();
   const router = useRouter();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -31,6 +33,7 @@ export function ChangePasswordForm() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (submitting) return;
     setError(null);
     setFieldErrors({});
     setSubmitting(true);
@@ -40,10 +43,11 @@ export function ChangePasswordForm() {
         newPassword,
         newPasswordConfirmation: confirmation,
       });
+      snackbar.success('Password changed. Other devices were signed out.');
       const fresh = await reload();
       router.replace(homeFor(fresh?.user.role ?? me.user.role));
     } catch (err) {
-      if (err instanceof ApiError && err.status === 422) {
+      if (err instanceof ApiError && err.isValidation) {
         setFieldErrors({
           currentPassword: err.field('currentPassword'),
           newPassword: err.field('newPassword'),

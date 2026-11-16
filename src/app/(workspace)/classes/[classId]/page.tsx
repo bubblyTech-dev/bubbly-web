@@ -8,13 +8,13 @@ import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 import { LoginLinkBox } from '@/components/common/LoginLinkBox';
 import { Modal } from '@/components/common/Modal';
 import { EmptyBlock, ErrorBlock, LoadingBlock } from '@/components/common/States';
-import { useToast } from '@/components/common/Toast';
 import { paths } from '@/config/paths';
 import { StudentFormModal } from '@/features/students/StudentFormModal';
 import { useApiData } from '@/hooks/useApiData';
+import { useAsyncAction } from '@/hooks/useAsyncAction';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { errorMessage } from '@/lib/api/errors';
 import { formatDate, initials } from '@/lib/format';
+import { useSnackbar } from '@/providers/SnackbarProvider';
 import { classService, studentService } from '@/services/school';
 import type { Student } from '@/types/school';
 
@@ -38,7 +38,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
     () => studentService.list({ classUuid: classId, search: search || undefined }),
     [classId, search],
   );
-  const { toast, show } = useToast();
+  const snackbar = useSnackbar();
 
   const [activeStudent, setActiveStudent] = useState<Student | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -47,8 +47,8 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
 
   const students = roster?.data ?? [];
   const refresh = () => {
-    void reload();
-    void reloadClass();
+    reload();
+    reloadClass();
   };
 
   if (classError && !classInfo) {
@@ -186,7 +186,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
                   <button
                     type="button"
                     onClick={() =>
-                      show(
+                      snackbar.info(
                         `Chat with ${student.guardianName ?? 'the parent'} opens with the Chat module (Phase C).`,
                       )
                     }
@@ -219,9 +219,8 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
             if (link) setNewLink({ url: link, who: updated.guardianName ?? updated.name });
             refresh();
           }}
-          onRemoved={(message) => {
+          onRemoved={() => {
             setActiveStudent(null);
-            show(message);
             refresh();
           }}
         />
@@ -239,29 +238,25 @@ export default function ClassDetailPage({ params }: { params: Promise<{ classId:
             setAdding(false);
           }}
           onSave={async (input) => {
-            if (editingStudent) {
-              await studentService.update(editingStudent.uuid, input);
-              show('Student updated.');
-            } else {
-              const result = await studentService.create(input);
-              setNewLink(
-                result.setPasswordUrl
-                  ? {
-                      url: result.setPasswordUrl,
-                      who: result.student.guardianName ?? result.student.name,
-                    }
-                  : null,
-              );
-              show('Student added.');
-            }
+            if (editingStudent) return studentService.update(editingStudent.uuid, input);
+            const result = await studentService.create(input);
+            setNewLink(
+              result.setPasswordUrl
+                ? {
+                    url: result.setPasswordUrl,
+                    who: result.student.guardianName ?? result.student.name,
+                  }
+                : null,
+            );
+            return result;
+          }}
+          onDone={() => {
             setEditingStudent(null);
             setAdding(false);
             refresh();
           }}
         />
       ) : null}
-
-      {toast}
     </div>
   );
 }
@@ -275,22 +270,30 @@ function StudentDetailsModal({
   student: Student;
   onClose: () => void;
   onChanged: (student: Student, setPasswordUrl?: string) => void;
-  onRemoved: (message: string) => void;
+  onRemoved: () => void;
 }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { run, pending: busy } = useAsyncAction();
   const [confirm, setConfirm] = useState<'left' | 'delete' | null>(null);
 
-  const run = async (action: () => Promise<void>) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await action();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
+  const sendLoginLink = () =>
+    run(
+      async () => {
+        const result = await studentService.parentLogin(student.uuid);
+        onChanged(result.student, result.setPasswordUrl);
+      },
+      { success: 'Login link created for the parent.' },
+    );
+
+  const confirmAction = async () => {
+    const ok =
+      confirm === 'left'
+        ? await run(() => studentService.changeStatus(student.uuid, 3), {
+            success: `${student.name} was marked as left.`,
+          })
+        : await run(() => studentService.remove(student.uuid), {
+            success: `${student.name} was deleted.`,
+          });
+    if (ok) onRemoved();
   };
 
   const login = student.parentLogin;
@@ -356,12 +359,7 @@ function StudentDetailsModal({
           <button
             type="button"
             disabled={busy || student.status !== 1}
-            onClick={() =>
-              void run(async () => {
-                const result = await studentService.parentLogin(student.uuid);
-                onChanged(result.student, result.setPasswordUrl);
-              })
-            }
+            onClick={() => void sendLoginLink()}
             className="mt-2 w-full rounded-full border border-black bg-white py-1.5 text-[11px] font-bold text-black transition hover:bg-black hover:text-white disabled:opacity-50"
           >
             {login ? 'Send a new login link' : 'Create parent login'}
@@ -370,10 +368,6 @@ function StudentDetailsModal({
             <p className="mt-1 text-[10px] text-gray-400">Add the parent email (Edit) first.</p>
           ) : null}
         </div>
-
-        {error ? (
-          <div className="rounded-lg bg-rose-50 px-2.5 py-2 text-rose-700">{error}</div>
-        ) : null}
       </div>
 
       <div className="mt-5 flex items-center justify-between gap-2">
@@ -385,17 +379,7 @@ function StudentDetailsModal({
             <button
               type="button"
               disabled={busy}
-              onClick={() =>
-                void run(async () => {
-                  if (confirm === 'left') {
-                    await studentService.changeStatus(student.uuid, 3);
-                    onRemoved(`${student.name} was marked as left.`);
-                  } else {
-                    await studentService.remove(student.uuid);
-                    onRemoved(`${student.name} was deleted.`);
-                  }
-                })
-              }
+              onClick={() => void confirmAction()}
               className="rounded-full bg-rose-600 px-3 py-1 font-semibold text-white hover:bg-rose-700"
             >
               Yes

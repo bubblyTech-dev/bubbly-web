@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 
 import { siteConfig } from '@/config/site';
 import { AuthProvider } from '@/providers/AuthProvider';
+import { SnackbarProvider } from '@/providers/SnackbarProvider';
 
 // Tailwind first (declares the cascade layer order), then our SCSS.
 import '@/styles/tailwind.css';
@@ -30,7 +31,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="en" className={inter.variable}>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <SnackbarProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </SnackbarProvider>
       </body>
     </html>
   );

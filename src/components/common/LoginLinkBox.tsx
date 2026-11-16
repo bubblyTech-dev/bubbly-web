@@ -3,20 +3,25 @@
 import { useState } from 'react';
 import { Check, Copy, KeyRound } from 'lucide-react';
 
+import { useSnackbar } from '@/providers/SnackbarProvider';
+
 /**
  * Shows a set-password link ONCE after it is created (new teacher, parent login, resend). The email may not be set up
  * yet, so the Principal can copy it and share it (for example on WhatsApp). It works once and expires.
  */
 export function LoginLinkBox({ url, who }: { url: string; who: string }) {
   const [copied, setCopied] = useState(false);
+  const snackbar = useSnackbar();
 
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
+      snackbar.success('Link copied.');
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setCopied(false);
+      // clipboard blocked (http page or permission): the field is selectable instead
+      snackbar.warning('Could not copy. Select the link and copy it yourself.');
     }
   };
 

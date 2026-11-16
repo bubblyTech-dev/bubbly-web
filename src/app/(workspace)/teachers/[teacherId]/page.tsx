@@ -19,12 +19,12 @@ import {
 import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 import { LoginLinkBox } from '@/components/common/LoginLinkBox';
 import { ErrorBlock, LoadingBlock } from '@/components/common/States';
-import { useToast } from '@/components/common/Toast';
 import { SubmitButton, TextField } from '@/components/form/Field';
 import { paths } from '@/config/paths';
 import { useApiData } from '@/hooks/useApiData';
-import { ApiError, errorMessage } from '@/lib/api/errors';
+import { useAsyncAction, type FieldErrorMap } from '@/hooks/useAsyncAction';
 import { formatMonthYear, formatTimeRange, initials } from '@/lib/format';
+import { useSnackbar } from '@/providers/SnackbarProvider';
 import { classService, teacherService } from '@/services/school';
 import type { Teacher } from '@/types/school';
 
@@ -37,10 +37,10 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ teach
     reload,
     setData,
   } = useApiData(() => teacherService.get(teacherId), [teacherId]);
-  const { toast, show } = useToast();
+  const snackbar = useSnackbar();
+  const { run, pending: busy } = useAsyncAction();
   const [isEditMode, setIsEditMode] = useState(false);
   const [link, setLink] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
   if (loading && !teacher) return <LoadingBlock className="py-32" />;
   if (error || !teacher) {
@@ -61,16 +61,22 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ teach
   const summary = teacher.monthSummary;
   const active = teacher.status === 1;
 
-  const act = async (action: () => Promise<void>) => {
-    setBusy(true);
-    try {
-      await action();
-    } catch (err) {
-      show(errorMessage(err), 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
+  const sendLoginLink = () =>
+    run(
+      async () => {
+        const result = await teacherService.loginLink(teacher.uuid);
+        setLink(result.setPasswordUrl);
+      },
+      { success: 'A new login link was created.' },
+    );
+
+  const toggleStatus = () =>
+    run(
+      async () => {
+        setData(await teacherService.changeStatus(teacher.uuid, active ? 2 : 1));
+      },
+      { success: active ? 'Teacher deactivated and signed out.' : 'Teacher activated.' },
+    );
 
   return (
     <div className="animate-in fade-in space-y-6 duration-300">
@@ -101,7 +107,9 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ teach
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
           <button
             type="button"
-            onClick={() => show(`Chat with ${teacher.name} opens with the Chat module (Phase C).`)}
+            onClick={() =>
+              snackbar.info(`Chat with ${teacher.name} opens with the Chat module (Phase C).`)
+            }
             className="flex items-center gap-1.5 rounded-full bg-black px-4 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-gray-800"
           >
             <MessageSquare className="h-3.5 w-3.5" />
@@ -170,12 +178,7 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ teach
               <button
                 type="button"
                 disabled={busy}
-                onClick={() =>
-                  void act(async () => {
-                    const result = await teacherService.loginLink(teacher.uuid);
-                    setLink(result.setPasswordUrl);
-                  })
-                }
+                onClick={() => void sendLoginLink()}
                 className="flex w-full items-center justify-center gap-1.5 rounded-full border border-black bg-white py-1.5 text-[11px] font-bold text-black transition hover:bg-black hover:text-white disabled:opacity-50"
               >
                 <KeyRound className="h-3.5 w-3.5" />
@@ -185,13 +188,7 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ teach
             <button
               type="button"
               disabled={busy}
-              onClick={() =>
-                void act(async () => {
-                  const updated = await teacherService.changeStatus(teacher.uuid, active ? 2 : 1);
-                  setData(updated);
-                  show(active ? 'Teacher deactivated and signed out.' : 'Teacher activated.');
-                })
-              }
+              onClick={() => void toggleStatus()}
               className={`w-full rounded-full py-1.5 text-[11px] font-semibold transition disabled:opacity-50 ${
                 active ? 'text-rose-600 hover:bg-rose-50' : 'bg-black text-white hover:bg-gray-800'
               }`}
@@ -210,7 +207,6 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ teach
               onSaved={(updated) => {
                 setData(updated);
                 setIsEditMode(false);
-                show('Teacher profile details updated successfully!');
               }}
             />
           ) : (
@@ -327,8 +323,6 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ teach
           )}
         </div>
       </div>
-
-      {toast}
     </div>
   );
 }
@@ -357,9 +351,8 @@ function EditTeacherForm({
     annualLeaveQuota: teacher.annualLeaveQuota === null ? '' : String(teacher.annualLeaveQuota),
   });
   const [classUuids, setClassUuids] = useState<string[]>(teacher.classes?.map((c) => c.uuid) ?? []);
-  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<FieldErrorMap>({});
+  const { run, pending: saving } = useAsyncAction();
 
   const set = (field: keyof typeof form) => (event: { target: { value: string } }) =>
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -371,48 +364,38 @@ function EditTeacherForm({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    setErrors({});
-    setFormError(null);
-    setSaving(true);
     const text = (value: string) => value.trim() || null;
-    try {
-      const updated = await teacherService.update(teacher.uuid, {
-        name: form.name.trim(),
-        email: form.email.trim(),
-        phone: text(form.phone),
-        designation: text(form.designation),
-        qualification: text(form.qualification),
-        experienceYears: form.experienceYears === '' ? null : Number(form.experienceYears),
-        joiningDate: form.joiningDate || null,
-        emergencyContact: text(form.emergencyContact),
-        shiftStartsAt: form.shiftStartsAt || null,
-        shiftEndsAt: form.shiftEndsAt || null,
-        annualLeaveQuota: form.annualLeaveQuota === '' ? null : Number(form.annualLeaveQuota),
-        classUuids,
-      });
-      onSaved(updated);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 422) {
-        setErrors(Object.fromEntries(Object.entries(err.fieldErrors).map(([k, v]) => [k, v[0]])));
-      } else setFormError(errorMessage(err));
-      setSaving(false);
-    }
+    await run(
+      async () => {
+        const updated = await teacherService.update(teacher.uuid, {
+          name: form.name.trim(),
+          email: form.email.trim(),
+          phone: text(form.phone),
+          designation: text(form.designation),
+          qualification: text(form.qualification),
+          experienceYears: form.experienceYears === '' ? null : Number(form.experienceYears),
+          joiningDate: form.joiningDate || null,
+          emergencyContact: text(form.emergencyContact),
+          shiftStartsAt: form.shiftStartsAt || null,
+          shiftEndsAt: form.shiftEndsAt || null,
+          annualLeaveQuota: form.annualLeaveQuota === '' ? null : Number(form.annualLeaveQuota),
+          classUuids,
+        });
+        onSaved(updated);
+      },
+      { success: 'Teacher profile details updated successfully!', onValidation: setErrors },
+    );
   };
 
   return (
     <form
-      onSubmit={submit}
+      onSubmit={(event) => void submit(event)}
       className="space-y-4 rounded-2xl border border-gray-100 bg-white p-6 text-xs shadow-2xs"
       noValidate
     >
       <h3 className="border-b border-gray-100 pb-2 text-sm font-bold text-gray-900">
         Edit Teacher Details
       </h3>
-      {formError ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700">
-          {formError}
-        </div>
-      ) : null}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <TextField label="Full Name" value={form.name} onChange={set('name')} error={errors.name} />

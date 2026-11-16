@@ -1,18 +1,18 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { Check, KeyRound, School } from 'lucide-react';
 
 import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 import { ErrorBlock, LoadingBlock } from '@/components/common/States';
-import { useToast } from '@/components/common/Toast';
 import { SelectField, TextField } from '@/components/form/Field';
 import { paths } from '@/config/paths';
 import { useApiData } from '@/hooks/useApiData';
-import { ApiError, errorMessage } from '@/lib/api/errors';
+import { useAsyncAction, type FieldErrorMap } from '@/hooks/useAsyncAction';
 import { formatMonthYear, formatTimeRange, formatWorkingDays } from '@/lib/format';
 import { useAuth } from '@/providers/AuthProvider';
+import { useSnackbar } from '@/providers/SnackbarProvider';
 import { schoolService, profileService } from '@/services/school';
 import type { SchoolOverview, Usage } from '@/types/school';
 
@@ -67,7 +67,7 @@ function ProfileView({
   onSchoolSaved: (school: SchoolOverview['school']) => void;
 }) {
   const { me, reload: reloadMe } = useAuth();
-  const { toast, show } = useToast();
+  const snackbar = useSnackbar();
   const { school, subscription, usage } = overview;
 
   const [form, setForm] = useState({
@@ -79,43 +79,46 @@ function ProfileView({
     academicYearStartMonth: String(school.academicYearStartMonth),
   });
   const [workingDays, setWorkingDays] = useState<number[]>(school.workingDays);
-  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
-  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<FieldErrorMap>({});
+  const { run, pending: saving } = useAsyncAction();
   const [isSaved, setIsSaved] = useState(false);
+
+  // the "Saved!" tick on the button goes away after two seconds
+  useEffect(() => {
+    if (!isSaved) return;
+    const timer = setTimeout(() => setIsSaved(false), 2000);
+    return () => clearTimeout(timer);
+  }, [isSaved]);
 
   const set = (field: keyof typeof form) => (event: { target: { value: string } }) =>
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
 
   const handleSave = async (event: FormEvent) => {
     event.preventDefault();
-    setErrors({});
-    setSaving(true);
-    try {
-      const saved = await schoolService.update({
-        name: form.schoolName.trim(),
-        contactPhone: form.contactPhone.trim() || null,
-        opensAt: form.opensAt || null,
-        closesAt: form.closesAt || null,
-        workingDays,
-        academicYearStartMonth: Number(form.academicYearStartMonth),
-      });
-      if (form.principalName.trim() && form.principalName.trim() !== me?.user.name) {
-        await profileService.update({ name: form.principalName.trim() });
-        await reloadMe();
-      }
-      onSchoolSaved(saved);
-      setIsSaved(true);
-      setTimeout(() => setIsSaved(false), 2000);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 422) {
-        const fields = Object.fromEntries(
-          Object.entries(err.fieldErrors).map(([k, v]) => [k, v[0]]),
-        );
-        setErrors({ ...fields, schoolName: fields.name });
-      } else show(errorMessage(err), 'error');
-    } finally {
-      setSaving(false);
-    }
+    const ok = await run(
+      async () => {
+        const saved = await schoolService.update({
+          name: form.schoolName.trim(),
+          contactPhone: form.contactPhone.trim() || null,
+          opensAt: form.opensAt || null,
+          closesAt: form.closesAt || null,
+          workingDays,
+          academicYearStartMonth: Number(form.academicYearStartMonth),
+        });
+        onSchoolSaved(saved);
+        const name = form.principalName.trim();
+        if (name && name !== me?.user.name) {
+          await profileService.update({ name });
+          await reloadMe();
+        }
+      },
+      {
+        success: 'School details saved.',
+        // the API calls the school name `name`; the form calls it `schoolName`
+        onValidation: (fields) => setErrors({ ...fields, schoolName: fields.name }),
+      },
+    );
+    if (ok) setIsSaved(true);
   };
 
   const statusLabel = subscription.status ? SUBSCRIPTION_STATUS[subscription.status] : 'No plan';
@@ -137,7 +140,7 @@ function ProfileView({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <form
-            onSubmit={handleSave}
+            onSubmit={(event) => void handleSave(event)}
             className="space-y-4 rounded-2xl border border-gray-100 bg-[#FBFBFC] p-6 shadow-2xs"
             noValidate
           >
@@ -334,7 +337,7 @@ function ProfileView({
               <button
                 type="button"
                 onClick={() =>
-                  show(
+                  snackbar.info(
                     'Online billing and invoices arrive with the subscription self-service screens.',
                   )
                 }
@@ -346,8 +349,6 @@ function ProfileView({
           </div>
         </div>
       </div>
-
-      {toast}
     </div>
   );
 }

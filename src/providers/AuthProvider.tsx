@@ -11,6 +11,7 @@ import {
 } from 'react';
 
 import { refreshAccessToken } from '@/lib/api/client';
+import { apiEvents } from '@/lib/api/events';
 import { session } from '@/lib/auth/session';
 import { authService } from '@/services/auth';
 import type { MeResponse } from '@/types/auth';
@@ -20,9 +21,11 @@ type Status = 'loading' | 'authenticated' | 'anonymous';
 interface AuthContextValue {
   status: Status;
   me: MeResponse | null;
+  /** Throws ApiError (wrong password, locked ...): the login form shows it. */
   login: (email: string, password: string) => Promise<MeResponse>;
+  /** Never throws: the user is signed out locally even when the server cannot be reached. */
   logout: () => Promise<void>;
-  /** Reload who is signed in (after a profile or password change). */
+  /** Reload who is signed in (after a profile or password change). Never throws; null when it failed. */
   reload: () => Promise<MeResponse | null>;
   can: (permission: string) => boolean;
   hasModule: (moduleKey: string) => boolean;
@@ -47,14 +50,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return response.data;
   }, []);
 
-  // on first load: the refresh cookie (if any) gives a new access token
+  const reload = useCallback(async () => {
+    try {
+      return await loadMe();
+    } catch {
+      return null;
+    }
+  }, [loadMe]);
+
+  // first load: the refresh cookie (if any) gives a new access token
   useEffect(() => {
     let active = true;
     (async () => {
-      const token = session.getToken() ?? (await refreshAccessToken());
-      if (!active) return;
-      if (!token) return signOutLocally();
       try {
+        const token = session.getToken() ?? (await refreshAccessToken());
+        if (!active) return;
+        if (!token) {
+          signOutLocally();
+          return;
+        }
         await loadMe();
       } catch {
         if (active) signOutLocally();
@@ -65,13 +79,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [loadMe, signOutLocally]);
 
-  useEffect(() => session.onExpired(signOutLocally), [signOutLocally]);
+  // states announced by the API interceptors
+  useEffect(
+    () =>
+      apiEvents.on((event) => {
+        if (event.type === 'sessionExpired') signOutLocally();
+        // the RoleGate shows the "paused" screen or the change-password page from the fresh data
+        if (event.type === 'subscriptionInactive' || event.type === 'passwordChangeRequired')
+          void reload();
+      }),
+    [signOutLocally, reload],
+  );
 
   const login = useCallback(
     async (email: string, password: string) => {
       const response = await authService.login(email, password);
       session.setToken(response.data.accessToken);
-      return loadMe();
+      try {
+        return await loadMe();
+      } catch (error) {
+        session.setToken(null);
+        throw error;
+      }
     },
     [loadMe],
   );
@@ -79,18 +108,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     try {
       await authService.logout();
+    } catch {
+      // the server could not end the session (offline): forget it here anyway
     } finally {
       signOutLocally();
     }
   }, [signOutLocally]);
-
-  const reload = useCallback(async () => {
-    try {
-      return await loadMe();
-    } catch {
-      return null;
-    }
-  }, [loadMe]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

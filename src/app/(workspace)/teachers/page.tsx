@@ -8,13 +8,13 @@ import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 import { LoginLinkBox } from '@/components/common/LoginLinkBox';
 import { CancelButton, Modal, ModalActions } from '@/components/common/Modal';
 import { EmptyBlock, ErrorBlock, LoadingBlock } from '@/components/common/States';
-import { useToast } from '@/components/common/Toast';
 import { SubmitButton, TextField } from '@/components/form/Field';
 import { paths } from '@/config/paths';
 import { useApiData } from '@/hooks/useApiData';
+import { useAsyncAction, type FieldErrorMap } from '@/hooks/useAsyncAction';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { ApiError, errorMessage } from '@/lib/api/errors';
 import { initials } from '@/lib/format';
+import { useSnackbar } from '@/providers/SnackbarProvider';
 import { classService, teacherService } from '@/services/school';
 import { STAFF_ATTENDANCE, type Teacher } from '@/types/school';
 
@@ -46,7 +46,7 @@ export default function TeachersPage() {
     () => teacherService.list({ search: search || undefined }),
     [search],
   );
-  const { toast, show } = useToast();
+  const snackbar = useSnackbar();
 
   const [attendanceFor, setAttendanceFor] = useState<Teacher | null>(null);
   const [adding, setAdding] = useState(false);
@@ -163,7 +163,9 @@ export default function TeachersPage() {
                   <button
                     type="button"
                     onClick={() =>
-                      show(`Chat with ${teacher.name} opens with the Chat module (Phase C).`)
+                      snackbar.info(
+                        `Chat with ${teacher.name} opens with the Chat module (Phase C).`,
+                      )
                     }
                     className="rounded-full bg-black px-4 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-gray-800 active:scale-95"
                   >
@@ -193,13 +195,10 @@ export default function TeachersPage() {
           onCreated={(teacher, url) => {
             setAdding(false);
             setNewLink({ url, who: teacher.name ?? teacher.email });
-            show('Teacher added.');
-            void reload();
+            reload();
           }}
         />
       ) : null}
-
-      {toast}
     </div>
   );
 }
@@ -218,28 +217,26 @@ function AttendanceModal({
     () => teacherService.get(teacher.uuid),
     [teacher.uuid],
   );
+  const { run, pending } = useAsyncAction();
   const [saving, setSaving] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const current = teacher.todayAttendance?.status;
   const summary = detail?.monthSummary;
 
   const mark = async (status: number) => {
     setSaving(status);
-    setError(null);
-    try {
-      const result = await teacherService.markAttendance(teacher.uuid, { status });
-      const updated = {
-        ...teacher,
-        todayAttendance: { status: result.status, label: result.label, note: result.note },
-      };
-      if (detail) setDetail({ ...detail, monthSummary: result.monthSummary });
-      onSaved(updated);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setSaving(null);
-    }
+    await run(
+      async () => {
+        const result = await teacherService.markAttendance(teacher.uuid, { status });
+        if (detail) setDetail({ ...detail, monthSummary: result.monthSummary });
+        onSaved({
+          ...teacher,
+          todayAttendance: { status: result.status, label: result.label, note: result.note },
+        });
+      },
+      { success: 'Attendance saved.' },
+    );
+    setSaving(null);
   };
 
   return (
@@ -261,7 +258,7 @@ function AttendanceModal({
             <button
               key={status}
               type="button"
-              disabled={saving !== null}
+              disabled={pending}
               onClick={() => void mark(status)}
               className={`flex flex-col items-center gap-1.5 rounded-xl border p-2.5 text-xs font-bold transition disabled:opacity-60 ${
                 current === status
@@ -274,10 +271,6 @@ function AttendanceModal({
             </button>
           ))}
         </div>
-
-        {error ? (
-          <div className="rounded-lg bg-rose-50 px-2.5 py-2 text-rose-700">{error}</div>
-        ) : null}
 
         <div className="mt-3 rounded-xl bg-gray-50 p-3 text-gray-600">
           <div className="flex justify-between py-0.5">
@@ -332,34 +325,28 @@ function AddTeacherModal({
     joiningDate: '',
     classUuid: '',
   });
-  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<FieldErrorMap>({});
+  const { run, pending: saving } = useAsyncAction();
 
   const set = (field: keyof typeof form) => (event: { target: { value: string } }) =>
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    setErrors({});
-    setFormError(null);
-    setSaving(true);
-    try {
-      const result = await teacherService.create({
-        name: form.name.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim() || null,
-        qualification: form.qualification.trim() || null,
-        joiningDate: form.joiningDate || null,
-        classUuids: form.classUuid ? [form.classUuid] : [],
-      });
-      onCreated(result.teacher, result.setPasswordUrl);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 422) {
-        setErrors(Object.fromEntries(Object.entries(err.fieldErrors).map(([k, v]) => [k, v[0]])));
-      } else setFormError(errorMessage(err));
-      setSaving(false);
-    }
+    await run(
+      async () => {
+        const result = await teacherService.create({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim() || null,
+          qualification: form.qualification.trim() || null,
+          joiningDate: form.joiningDate || null,
+          classUuids: form.classUuid ? [form.classUuid] : [],
+        });
+        onCreated(result.teacher, result.setPasswordUrl);
+      },
+      { success: 'Teacher added. Share the login link below.', onValidation: setErrors },
+    );
   };
 
   return (
@@ -369,12 +356,7 @@ function AddTeacherModal({
       title="Add Teacher"
       icon={<UserPlus className="h-5 w-5 text-gray-700" />}
     >
-      <form onSubmit={submit} className="space-y-3 text-xs" noValidate>
-        {formError ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700">
-            {formError}
-          </div>
-        ) : null}
+      <form onSubmit={(event) => void submit(event)} className="space-y-3 text-xs" noValidate>
         <TextField
           label="Full Name *"
           required

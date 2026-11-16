@@ -1,0 +1,114 @@
+@use '../abstracts' as *;
+
+// App-wide snackbars (providers/SnackbarProvider.tsx). Stacked above the mobile bottom navigation.
+.snackbar-stack {
+  position: fixed;
+  right: 1rem;
+  bottom: 6rem;
+  left: 1rem;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: none;
+
+  @include up('sm') {
+    right: 1.5rem;
+    left: auto;
+    align-items: flex-end;
+  }
+}
+
+.snackbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  width: 100%;
+  max-width: 24rem;
+  border-radius: radius('lg');
+  background-color: palette('ink-900');
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.18);
+  padding: 0.75rem 0.75rem 0.75rem 0.875rem;
+  color: #fff;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  pointer-events: auto;
+  animation: snackbar-in 180ms ease-out;
+
+  &__icon {
+    flex-shrink: 0;
+    margin-top: 0.0625rem;
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+
+  &--success &__icon {
+    color: #34d399;
+  }
+
+  &--error &__icon {
+    color: #fb7185;
+  }
+
+  &--warning &__icon {
+    color: #fbbf24;
+  }
+
+  &--info &__icon {
+    color: #60a5fa;
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  &__action {
+    flex-shrink: 0;
+    border-radius: radius('pill');
+    padding: 0.125rem 0.5rem;
+    color: #fbbf24;
+    font-size: 0.75rem;
+    font-weight: 700;
+
+    &:hover {
+      background-color: rgb(255 255 255 / 0.1);
+    }
+  }
+
+  &__close {
+    flex-shrink: 0;
+    border-radius: radius('pill');
+    padding: 0.125rem;
+    color: rgb(255 255 255 / 0.6);
+
+    &:hover {
+      background-color: rgb(255 255 255 / 0.1);
+      color: #fff;
+    }
+
+    &:focus-visible {
+      @include focus-ring;
+    }
+  }
+}
+
+@keyframes snackbar-in {
+  from {
+    transform: translateY(0.5rem);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snackbar {
+    animation: none;
+  }
+}

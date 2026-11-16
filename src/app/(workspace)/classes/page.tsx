@@ -7,11 +7,10 @@ import { Edit2, School } from 'lucide-react';
 import { Breadcrumbs } from '@/components/common/Breadcrumbs';
 import { CancelButton, Modal, ModalActions } from '@/components/common/Modal';
 import { ErrorBlock, LoadingBlock } from '@/components/common/States';
-import { useToast } from '@/components/common/Toast';
 import { SelectField, SubmitButton, TextField } from '@/components/form/Field';
 import { paths } from '@/config/paths';
 import { useApiData } from '@/hooks/useApiData';
-import { ApiError, errorMessage } from '@/lib/api/errors';
+import { useAsyncAction, type FieldErrorMap } from '@/hooks/useAsyncAction';
 import { formatTimeRange } from '@/lib/format';
 import { classService, teacherService } from '@/services/school';
 import type { ClassInput, Ref, SchoolClass } from '@/types/school';
@@ -55,8 +54,6 @@ const toInput = (form: ClassForm): ClassInput => ({
 export default function ClassesPage() {
   const { data, loading, error, reload } = useApiData(() => classService.list(), []);
   const { data: teachers } = useApiData(() => teacherService.options(), []);
-  const { toast, show } = useToast();
-
   const [editing, setEditing] = useState<SchoolClass | null>(null);
   const [adding, setAdding] = useState(false);
 
@@ -156,17 +153,12 @@ export default function ClassesPage() {
           teachers={teachers ?? []}
           submitLabel="Save Changes"
           onClose={() => setEditing(null)}
-          onSubmit={async (form) => {
-            await classService.update(editing.uuid, toInput(form));
+          onSubmit={(form) => classService.update(editing.uuid, toInput(form))}
+          submitSuccess="Class updated."
+          onDelete={() => classService.remove(editing.uuid)}
+          onDone={() => {
             setEditing(null);
-            show('Class updated.');
-            void reload();
-          }}
-          onDelete={async () => {
-            await classService.remove(editing.uuid);
-            setEditing(null);
-            show('Class deleted.');
-            void reload();
+            reload();
           }}
           studentCount={editing.studentCount ?? 0}
         />
@@ -180,20 +172,19 @@ export default function ClassesPage() {
           teachers={teachers ?? []}
           submitLabel="Create Class"
           onClose={() => setAdding(false)}
-          onSubmit={async (form) => {
-            await classService.create(toInput(form));
+          onSubmit={(form) => classService.create(toInput(form))}
+          submitSuccess="Class added."
+          onDone={() => {
             setAdding(false);
-            show('Class added.');
-            void reload();
+            reload();
           }}
         />
       ) : null}
-
-      {toast}
     </div>
   );
 }
 
+/** Add or edit a class. The API calls come from the page; this modal runs them with the shared error handling. */
 function ClassFormModal({
   title,
   icon,
@@ -203,7 +194,9 @@ function ClassFormModal({
   submitLabel,
   onClose,
   onSubmit,
+  submitSuccess,
   onDelete,
+  onDone,
   studentCount = 0,
 }: {
   title: string;
@@ -213,37 +206,28 @@ function ClassFormModal({
   teachers: Ref[];
   submitLabel: string;
   onClose: () => void;
-  onSubmit: (form: ClassForm) => Promise<void>;
-  onDelete?: () => Promise<void>;
+  onSubmit: (form: ClassForm) => Promise<unknown>;
+  submitSuccess: string;
+  onDelete?: () => Promise<unknown>;
+  onDone: () => void;
   studentCount?: number;
 }) {
   const [form, setForm] = useState<ClassForm>(initial);
-  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<FieldErrorMap>({});
+  const { run, pending: saving } = useAsyncAction();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const set = (field: keyof ClassForm) => (event: { target: { value: string } }) =>
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
 
-  const handle = async (action: () => Promise<void>) => {
-    setErrors({});
-    setFormError(null);
-    setSaving(true);
-    try {
-      await action();
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 422) {
-        setErrors(Object.fromEntries(Object.entries(err.fieldErrors).map(([k, v]) => [k, v[0]])));
-        if (err.field('status')) setFormError(err.field('status') ?? null);
-      } else setFormError(errorMessage(err));
-      setSaving(false);
-    }
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (await run(() => onSubmit(form), { success: submitSuccess, onValidation: setErrors }))
+      onDone();
   };
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    void handle(() => onSubmit(form));
+  const remove = async () => {
+    if (onDelete && (await run(onDelete, { success: 'Class deleted.' }))) onDone();
   };
 
   // the picker always shows the current teacher, even before the options have loaded
@@ -253,12 +237,7 @@ function ClassFormModal({
 
   return (
     <Modal open onClose={onClose} title={title} icon={icon}>
-      <form onSubmit={submit} className="space-y-3 text-xs" noValidate>
-        {formError ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700">
-            {formError}
-          </div>
-        ) : null}
+      <form onSubmit={(event) => void submit(event)} className="space-y-3 text-xs" noValidate>
         <TextField
           label="Class / Group Name *"
           required
@@ -324,7 +303,7 @@ function ClassFormModal({
                 <button
                   type="button"
                   disabled={saving}
-                  onClick={() => void handle(onDelete)}
+                  onClick={() => void remove()}
                   className="rounded-full bg-rose-600 px-3 py-1 font-semibold text-white hover:bg-rose-700"
                 >
                   Yes, delete

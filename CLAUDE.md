@@ -17,4 +17,6 @@ Node 24 (`.nvmrc`), npm only. `npm run dev` (port 3001), `npm run build`, `npm r
 - All URLs from `config/paths.ts`. API calls via `lib/api/client.ts` inside `services/`.
 - Keep dependencies minimal; run `npm audit` after any install.
 - Auth: `providers/AuthProvider.tsx` (access token in memory only, refresh via the API's httpOnly cookie) and `components/auth/RoleGate.tsx` around each area layout (Principal `(workspace)`, Teacher `teacher/`, Parent `parent/` = Student login). The server re-checks every permission.
-- Data: `hooks/useApiData.ts` for loading/error state; school endpoints in `services/school.ts`, types in `types/school.ts`. Backend demo logins: `npm run seed:demo` in `../bubbly-backend`.
+- API: axios instance in `lib/api/client.ts` (interceptors add the Bearer token, refresh it once on a 401, and turn every failure into `ApiError`; 401/402/password-change states are broadcast through `lib/api/events.ts`). Services call `api.get/post/...` only; pass `{ skipAuth: true }` for public auth calls.
+- Data and actions: load with `hooks/useApiData.ts`; run every user action (save, delete, mark) through `hooks/useAsyncAction.ts` `run()`, which blocks double submits, shows the snackbar and puts 422 errors on fields. Never leave an `await` outside a try/catch or `run()`.
+- Messages: `useSnackbar()` from `providers/SnackbarProvider.tsx` (`success`, `error`, `warning`, `info`, `fromError`); no page-level toasts. School endpoints in `services/school.ts`, types in `types/school.ts`. Demo logins: `npm run seed:demo` in `../bubbly-backend`.

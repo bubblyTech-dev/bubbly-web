@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react';
 
-import { errorMessage } from '@/lib/api/errors';
+import { errorMessage, isCancelled } from '@/lib/api/errors';
+import { useSnackbar } from '@/providers/SnackbarProvider';
 
 type Key = string | number | boolean | null | undefined;
 
@@ -20,11 +21,15 @@ interface State<T> {
  *
  * `deps` are the plain values the request depends on; it runs again when one changes, and answers that arrive after
  * the inputs changed are ignored. The previous data stays visible while the next request runs.
+ * The first load's error is returned as `error` (the page shows it); when a later reload fails while data is already
+ * on screen, a snackbar tells the user instead. Never throws.
  */
 export function useApiData<T>(load: () => Promise<T>, deps: Key[]) {
+  const snackbar = useSnackbar();
   const [state, setState] = useState<State<T>>({ data: null, error: null, key: null });
   const [version, setVersion] = useState(0);
   const loadRef = useRef(load);
+  const hasData = useRef(false);
 
   useEffect(() => {
     loadRef.current = load;
@@ -34,15 +39,24 @@ export function useApiData<T>(load: () => Promise<T>, deps: Key[]) {
 
   useEffect(() => {
     let active = true;
-    loadRef.current().then(
-      (data) => active && setState({ data, error: null, key }),
-      (err: unknown) =>
-        active && setState((prev) => ({ data: prev.data, error: errorMessage(err), key })),
-    );
+    const handle = async () => {
+      try {
+        const data = await loadRef.current();
+        if (!active) return;
+        hasData.current = true;
+        setState({ data, error: null, key });
+      } catch (error) {
+        if (!active || isCancelled(error)) return;
+        const message = errorMessage(error);
+        if (hasData.current) snackbar.error(message);
+        setState((prev) => ({ data: prev.data, error: message, key }));
+      }
+    };
+    void handle();
     return () => {
       active = false;
     };
-  }, [key]);
+  }, [key, snackbar]);
 
   const reload = useCallback(() => setVersion((v) => v + 1), []);
 

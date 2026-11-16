@@ -18,6 +18,7 @@ export function ForgotPasswordForm() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (submitting) return;
     setError(null);
     setEmailError(undefined);
     setSubmitting(true);
@@ -25,7 +26,7 @@ export function ForgotPasswordForm() {
       const response = await authService.forgotPassword(email.trim());
       setSent(response.message);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 422) setEmailError(err.field('email'));
+      if (err instanceof ApiError && err.isValidation) setEmailError(err.field('email'));
       else setError(errorMessage(err));
     } finally {
       setSubmitting(false);

@@ -7,12 +7,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthCard, FormAlert } from '@/components/auth/AuthCard';
 import { PasswordField, SubmitButton, TextField } from '@/components/form/Field';
 import { paths } from '@/config/paths';
-import { ApiError, errorMessage } from '@/lib/api/errors';
+import { ApiError, errorMessage, isCancelled } from '@/lib/api/errors';
 import { homeFor, safeNext } from '@/lib/auth/roles';
 import { useAuth } from '@/providers/AuthProvider';
+import { useSnackbar } from '@/providers/SnackbarProvider';
 
 export function LoginForm() {
   const { status, me, login } = useAuth();
+  const snackbar = useSnackbar();
   const router = useRouter();
   const next = safeNext(useSearchParams().get('next'));
 
@@ -31,13 +33,17 @@ export function LoginForm() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (submitting) return;
     setError(null);
     setFieldErrors({});
     setSubmitting(true);
     try {
-      await login(email.trim(), password);
+      const signedIn = await login(email.trim(), password);
+      snackbar.success(`Welcome back${signedIn.user.name ? `, ${signedIn.user.name}` : ''}!`);
+      // the effect above sends the user to their home; keep the button busy until then
     } catch (err) {
-      if (err instanceof ApiError && err.status === 422) {
+      if (isCancelled(err)) return;
+      if (err instanceof ApiError && err.isValidation) {
         setFieldErrors({ email: err.field('email'), password: err.field('password') });
       } else {
         setError(errorMessage(err));

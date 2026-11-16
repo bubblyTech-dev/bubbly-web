@@ -8,6 +8,7 @@ import { paths } from '@/config/paths';
 import { roleLabel } from '@/lib/auth/roles';
 import { initials } from '@/lib/format';
 import { useAuth } from '@/providers/AuthProvider';
+import { useSnackbar } from '@/providers/SnackbarProvider';
 import { ROLE } from '@/types/auth';
 
 interface RoleSwitcherProps {
@@ -25,6 +26,7 @@ const profilePath: Record<number, string> = {
 export function RoleSwitcher(_props: RoleSwitcherProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { me, logout } = useAuth();
+  const snackbar = useSnackbar();
   if (!me) return null;
 
   const { user, school } = me;
@@ -84,7 +86,7 @@ export function RoleSwitcher(_props: RoleSwitcherProps) {
               type="button"
               onClick={() => {
                 setIsOpen(false);
-                void logout();
+                void logout().then(() => snackbar.info('You are logged out.'));
               }}
               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50"
             >

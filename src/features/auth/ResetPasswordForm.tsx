@@ -22,6 +22,7 @@ export function ResetPasswordForm() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (submitting) return;
     setError(null);
     setFieldErrors({});
     setSubmitting(true);
@@ -29,7 +30,7 @@ export function ResetPasswordForm() {
       await authService.resetPassword({ token, password, passwordConfirmation: confirmation });
       setDone(true);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 422) {
+      if (err instanceof ApiError && err.isValidation) {
         setFieldErrors({
           password: err.field('password'),
           passwordConfirmation: err.field('passwordConfirmation'),

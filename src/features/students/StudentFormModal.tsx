@@ -5,7 +5,7 @@ import { Edit2, UserPlus } from 'lucide-react';
 
 import { CancelButton, Modal, ModalActions } from '@/components/common/Modal';
 import { SelectField, SubmitButton, TextAreaField, TextField } from '@/components/form/Field';
-import { ApiError, errorMessage } from '@/lib/api/errors';
+import { useAsyncAction, type FieldErrorMap } from '@/hooks/useAsyncAction';
 import type { Ref, Student, StudentInput } from '@/types/school';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -64,42 +64,40 @@ const toInput = (form: Form, isNew: boolean): StudentInput => {
   };
 };
 
-/** Add or edit a student. `onSave` gets the API input and throws ApiError on failure (shown per field). */
+/**
+ * Add or edit a student. `onSave` makes the API call (and may throw); the modal shows field errors and snackbars and
+ * calls `onDone` only after a successful save.
+ */
 export function StudentFormModal({
   student,
   classes,
   defaultClassUuid = '',
   onClose,
   onSave,
+  onDone,
 }: {
   student: Student | null;
   classes: Ref[];
   defaultClassUuid?: string;
   onClose: () => void;
-  onSave: (input: StudentInput) => Promise<void>;
+  onSave: (input: StudentInput) => Promise<unknown>;
+  onDone: () => void;
 }) {
   const isNew = !student;
   const [form, setForm] = useState<Form>(() => fromStudent(student, defaultClassUuid));
-  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<FieldErrorMap>({});
+  const { run, pending: saving } = useAsyncAction();
 
   const set = (field: keyof Form) => (event: { target: { value: string } }) =>
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    setErrors({});
-    setFormError(null);
-    setSaving(true);
-    try {
-      await onSave(toInput(form, isNew));
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 422) {
-        setErrors(Object.fromEntries(Object.entries(err.fieldErrors).map(([k, v]) => [k, v[0]])));
-      } else setFormError(errorMessage(err));
-      setSaving(false);
-    }
+    const ok = await run(() => onSave(toInput(form, isNew)), {
+      success: isNew ? 'Student added.' : 'Student updated.',
+      onValidation: setErrors,
+    });
+    if (ok) onDone();
   };
 
   return (
@@ -116,13 +114,7 @@ export function StudentFormModal({
         )
       }
     >
-      <form onSubmit={submit} className="space-y-4 text-xs" noValidate>
-        {formError ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700">
-            {formError}
-          </div>
-        ) : null}
-
+      <form onSubmit={(event) => void submit(event)} className="space-y-4 text-xs" noValidate>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <TextField
             label="Student Full Name *"
