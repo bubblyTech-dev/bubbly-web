@@ -16,3 +16,5 @@ Node 24 (`.nvmrc`), npm only. `npm run dev` (port 3001), `npm run build`, `npm r
 - Tailwind for layout, SCSS BEM for reusable components. SCSS partials use `@use '../abstracts' as *;`.
 - All URLs from `config/paths.ts`. API calls via `lib/api/client.ts` inside `services/`.
 - Keep dependencies minimal; run `npm audit` after any install.
+- Auth: `providers/AuthProvider.tsx` (access token in memory only, refresh via the API's httpOnly cookie) and `components/auth/RoleGate.tsx` around each area layout (Principal `(workspace)`, Teacher `teacher/`, Parent `parent/` = Student login). The server re-checks every permission.
+- Data: `hooks/useApiData.ts` for loading/error state; school endpoints in `services/school.ts`, types in `types/school.ts`. Backend demo logins: `npm run seed:demo` in `../bubbly-backend`.

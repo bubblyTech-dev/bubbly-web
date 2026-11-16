@@ -1,98 +1,72 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import Link from 'next/link';
-import { Breadcrumbs } from '@/components/common/Breadcrumbs';
-import { Edit2, X, School } from 'lucide-react';
+import { Edit2, School } from 'lucide-react';
 
-interface ClassItem {
-  id: string;
+import { Breadcrumbs } from '@/components/common/Breadcrumbs';
+import { CancelButton, Modal, ModalActions } from '@/components/common/Modal';
+import { ErrorBlock, LoadingBlock } from '@/components/common/States';
+import { useToast } from '@/components/common/Toast';
+import { SelectField, SubmitButton, TextField } from '@/components/form/Field';
+import { paths } from '@/config/paths';
+import { useApiData } from '@/hooks/useApiData';
+import { ApiError, errorMessage } from '@/lib/api/errors';
+import { formatTimeRange } from '@/lib/format';
+import { classService, teacherService } from '@/services/school';
+import type { ClassInput, Ref, SchoolClass } from '@/types/school';
+
+interface ClassForm {
   name: string;
-  code: string;
-  studentCount: number;
-  teacherName: string;
-  roomNumber?: string;
-  timing?: string;
+  classTeacherUuid: string;
+  room: string;
+  startsAt: string;
+  endsAt: string;
+  capacity: string;
 }
 
-const initialClasses: ClassItem[] = [
-  {
-    id: 'cls-1',
-    name: 'Playgroup',
-    code: 'PG-A',
-    studentCount: 120,
-    teacherName: 'Neha Verma',
-    roomNumber: 'Room 101',
-    timing: '9:00 AM - 12:00 PM',
-  },
-  {
-    id: 'cls-2',
-    name: 'Nursery',
-    code: 'NUR-A',
-    studentCount: 140,
-    teacherName: 'Priya Sharma',
-    roomNumber: 'Room 102',
-    timing: '8:45 AM - 12:30 PM',
-  },
-  {
-    id: 'cls-3',
-    name: 'Jr KG',
-    code: 'JKG-A',
-    studentCount: 130,
-    teacherName: 'Ananya Gupta',
-    roomNumber: 'Room 103',
-    timing: '8:30 AM - 1:00 PM',
-  },
-  {
-    id: 'cls-4',
-    name: 'Sr KG',
-    code: 'SKG-A',
-    studentCount: 134,
-    teacherName: 'Pallavi Dave',
-    roomNumber: 'Room 104',
-    timing: '8:30 AM - 1:30 PM',
-  },
-];
+const emptyForm: ClassForm = {
+  name: '',
+  classTeacherUuid: '',
+  room: '',
+  startsAt: '',
+  endsAt: '',
+  capacity: '',
+};
+
+const toForm = (c: SchoolClass): ClassForm => ({
+  name: c.name,
+  classTeacherUuid: c.classTeacher?.uuid ?? '',
+  room: c.room ?? '',
+  startsAt: c.startsAt ?? '',
+  endsAt: c.endsAt ?? '',
+  capacity: c.capacity === null ? '' : String(c.capacity),
+});
+
+const toInput = (form: ClassForm): ClassInput => ({
+  name: form.name.trim(),
+  classTeacherUuid: form.classTeacherUuid || null,
+  room: form.room.trim() || null,
+  startsAt: form.startsAt || null,
+  endsAt: form.endsAt || null,
+  capacity: form.capacity === '' ? null : Number(form.capacity),
+});
 
 export default function ClassesPage() {
-  const [classList, setClassList] = useState<ClassItem[]>(initialClasses);
-  const [editingClass, setEditingClass] = useState<ClassItem | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newClassName, setNewClassName] = useState('Activity Batch');
-  const [newTeacherName, setNewTeacherName] = useState('');
-  const [newStudentCount, setNewStudentCount] = useState(25);
+  const { data, loading, error, reload } = useApiData(() => classService.list(), []);
+  const { data: teachers } = useApiData(() => teacherService.options(), []);
+  const { toast, show } = useToast();
 
-  const totalStudents = classList.reduce((acc, c) => acc + c.studentCount, 0);
+  const [editing, setEditing] = useState<SchoolClass | null>(null);
+  const [adding, setAdding] = useState(false);
 
-  const handleSaveEdit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingClass) return;
-    setClassList((prev) => prev.map((c) => (c.id === editingClass.id ? editingClass : c)));
-    setEditingClass(null);
-  };
-
-  const handleAddClass = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newClass: ClassItem = {
-      id: `cls-${Date.now()}`,
-      name: newClassName,
-      code: `${newClassName.substring(0, 3).toUpperCase()}-B`,
-      studentCount: Number(newStudentCount) || 20,
-      teacherName: newTeacherName || 'To Be Assigned',
-      roomNumber: `Room 10${classList.length + 1}`,
-      timing: '9:00 AM - 12:30 PM',
-    };
-    setClassList([...classList, newClass]);
-    setIsAddModalOpen(false);
-    setNewTeacherName('');
-  };
+  const classList = data?.data ?? [];
+  const totalStudents = data?.meta.totalStudents ?? 0;
 
   return (
     <div className="animate-in fade-in space-y-6 duration-300">
-      {/* Breadcrumbs */}
       <Breadcrumbs items={[{ label: 'Classes' }]} />
 
-      {/* Title & Total Students Row (Matching Figma Screen 5) */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl">
           Class({classList.length})
@@ -102,16 +76,21 @@ export default function ClassesPage() {
         </div>
       </div>
 
-      {/* Grid of Class Cards (Matching Figma Screen 5) */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {classList.map((cls) => {
-          const slug = cls.name.toLowerCase().replace(/\s+/g, '-');
-          return (
+      {loading && !data ? (
+        <LoadingBlock />
+      ) : error && !data ? (
+        <ErrorBlock message={error} onRetry={() => void reload()} />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {classList.map((cls) => (
             <div
-              key={cls.id}
+              key={cls.uuid}
               className="group flex min-h-[170px] flex-col justify-between rounded-2xl bg-[#F4F5F7] p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
             >
-              <Link href={`/classes/${slug}`} className="block flex-1 cursor-pointer">
+              <Link
+                href={paths.workspace.classDetail(cls.uuid)}
+                className="block flex-1 cursor-pointer"
+              >
                 <div className="flex items-center justify-between">
                   <h2 className="text-xs font-semibold text-gray-700 capitalize group-hover:text-black">
                     {cls.name}
@@ -121,201 +100,255 @@ export default function ClassesPage() {
                   </span>
                 </div>
                 <div className="mt-4 text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl">
-                  {cls.studentCount}
+                  {cls.studentCount ?? 0}
                 </div>
+                {cls.room || cls.startsAt ? (
+                  <div className="mt-1 truncate text-[11px] text-gray-400">
+                    {[cls.room, formatTimeRange(cls.startsAt, cls.endsAt)]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </div>
+                ) : null}
               </Link>
 
               <div className="mt-6 flex items-center justify-between border-t border-gray-200/60 pt-3 text-xs">
-                <span className="max-w-[130px] truncate text-gray-500">{cls.teacherName}</span>
+                <span className="max-w-[130px] truncate text-gray-500">
+                  {cls.classTeacher?.name ?? 'To be assigned'}
+                </span>
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditingClass(cls);
-                  }}
+                  onClick={() => setEditing(cls)}
                   className="flex cursor-pointer items-center gap-1 font-bold text-gray-900 hover:text-black hover:underline"
                 >
                   <span>Edit</span>
                 </button>
               </div>
             </div>
-          );
-        })}
+          ))}
 
-        {/* "+ Add class" Card (Matching Figma Screen 5) */}
-        <button
-          type="button"
-          onClick={() => setIsAddModalOpen(true)}
-          className="group flex min-h-[170px] flex-col justify-between rounded-2xl border border-transparent bg-[#F4F5F7] p-6 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-[#ECEEF2] hover:shadow-md"
-        >
-          <div>
-            <span className="text-xs font-medium text-gray-500">new</span>
-          </div>
-          <div className="my-auto flex items-center gap-2">
-            <span className="text-2xl font-extrabold text-gray-900 group-hover:text-black sm:text-3xl">
-              + Add class
-            </span>
-          </div>
-          <div className="border-t border-transparent pt-3 text-xs text-gray-400">
-            Create level & section
-          </div>
-        </button>
-      </div>
-
-      {/* Edit Class Modal */}
-      {editingClass && (
-        <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Edit2 className="h-4 w-4 text-gray-700" />
-                <h3 className="text-base font-bold text-gray-900">
-                  Edit Class: {editingClass.name}
-                </h3>
-              </div>
-              <button
-                onClick={() => setEditingClass(null)}
-                className="rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-black"
-              >
-                <X className="h-5 w-5" />
-              </button>
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="group flex min-h-[170px] flex-col justify-between rounded-2xl border border-transparent bg-[#F4F5F7] p-6 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300 hover:bg-[#ECEEF2] hover:shadow-md"
+          >
+            <div>
+              <span className="text-xs font-medium text-gray-500">new</span>
             </div>
-
-            <form onSubmit={handleSaveEdit} className="mt-4 space-y-3 text-xs">
-              <div>
-                <label className="mb-1 block font-semibold text-gray-700">Class Name</label>
-                <input
-                  type="text"
-                  value={editingClass.name}
-                  onChange={(e) => setEditingClass({ ...editingClass, name: e.target.value })}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-hidden"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block font-semibold text-gray-700">Class Teacher Name</label>
-                <input
-                  type="text"
-                  value={editingClass.teacherName}
-                  onChange={(e) =>
-                    setEditingClass({ ...editingClass, teacherName: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-hidden"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block font-semibold text-gray-700">
-                  Enrolled Students Count
-                </label>
-                <input
-                  type="number"
-                  value={editingClass.studentCount}
-                  onChange={(e) =>
-                    setEditingClass({
-                      ...editingClass,
-                      studentCount: Number(e.target.value),
-                    })
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-hidden"
-                />
-              </div>
-
-              <div className="mt-5 flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingClass(null)}
-                  className="rounded-full border border-gray-300 px-4 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-full bg-black px-5 py-1.5 text-xs font-semibold text-white transition hover:bg-gray-800"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
+            <div className="my-auto flex items-center gap-2">
+              <span className="text-2xl font-extrabold text-gray-900 group-hover:text-black sm:text-3xl">
+                + Add class
+              </span>
+            </div>
+            <div className="border-t border-transparent pt-3 text-xs text-gray-400">
+              Create level & section
+            </div>
+          </button>
         </div>
       )}
 
-      {/* Add Class Modal */}
-      {isAddModalOpen && (
-        <div className="animate-in fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-              <div className="flex items-center gap-2">
-                <School className="h-5 w-5 text-gray-700" />
-                <h3 className="text-base font-bold text-gray-900">Add New Class</h3>
-              </div>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                className="rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-black"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      {editing ? (
+        <ClassFormModal
+          key={editing.uuid}
+          title={`Edit Class: ${editing.name}`}
+          icon={<Edit2 className="h-4 w-4 text-gray-700" />}
+          initial={toForm(editing)}
+          initialTeacher={editing.classTeacher ?? null}
+          teachers={teachers ?? []}
+          submitLabel="Save Changes"
+          onClose={() => setEditing(null)}
+          onSubmit={async (form) => {
+            await classService.update(editing.uuid, toInput(form));
+            setEditing(null);
+            show('Class updated.');
+            void reload();
+          }}
+          onDelete={async () => {
+            await classService.remove(editing.uuid);
+            setEditing(null);
+            show('Class deleted.');
+            void reload();
+          }}
+          studentCount={editing.studentCount ?? 0}
+        />
+      ) : null}
 
-            <form onSubmit={handleAddClass} className="mt-4 space-y-3 text-xs">
-              <div>
-                <label className="mb-1 block font-semibold text-gray-700">
-                  Class / Group Name *
-                </label>
-                <input
-                  required
-                  type="text"
-                  placeholder="e.g. Daycare Toddlers / Activity Wing"
-                  value={newClassName}
-                  onChange={(e) => setNewClassName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-hidden"
-                />
-              </div>
+      {adding ? (
+        <ClassFormModal
+          title="Add New Class"
+          icon={<School className="h-5 w-5 text-gray-700" />}
+          initial={emptyForm}
+          teachers={teachers ?? []}
+          submitLabel="Create Class"
+          onClose={() => setAdding(false)}
+          onSubmit={async (form) => {
+            await classService.create(toInput(form));
+            setAdding(false);
+            show('Class added.');
+            void reload();
+          }}
+        />
+      ) : null}
 
-              <div>
-                <label className="mb-1 block font-semibold text-gray-700">Class Teacher *</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="e.g. Ms. Kavita Joshi"
-                  value={newTeacherName}
-                  onChange={(e) => setNewTeacherName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-hidden"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block font-semibold text-gray-700">
-                  Initial Capacity / Students
-                </label>
-                <input
-                  type="number"
-                  value={newStudentCount}
-                  onChange={(e) => setNewStudentCount(Number(e.target.value))}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-hidden"
-                />
-              </div>
-
-              <div className="mt-5 flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="rounded-full border border-gray-300 px-4 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-full bg-black px-5 py-1.5 text-xs font-semibold text-white transition hover:bg-gray-800"
-                >
-                  Create Class
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {toast}
     </div>
+  );
+}
+
+function ClassFormModal({
+  title,
+  icon,
+  initial,
+  initialTeacher = null,
+  teachers,
+  submitLabel,
+  onClose,
+  onSubmit,
+  onDelete,
+  studentCount = 0,
+}: {
+  title: string;
+  icon: ReactNode;
+  initial: ClassForm;
+  initialTeacher?: Ref | null;
+  teachers: Ref[];
+  submitLabel: string;
+  onClose: () => void;
+  onSubmit: (form: ClassForm) => Promise<void>;
+  onDelete?: () => Promise<void>;
+  studentCount?: number;
+}) {
+  const [form, setForm] = useState<ClassForm>(initial);
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const set = (field: keyof ClassForm) => (event: { target: { value: string } }) =>
+    setForm((prev) => ({ ...prev, [field]: event.target.value }));
+
+  const handle = async (action: () => Promise<void>) => {
+    setErrors({});
+    setFormError(null);
+    setSaving(true);
+    try {
+      await action();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 422) {
+        setErrors(Object.fromEntries(Object.entries(err.fieldErrors).map(([k, v]) => [k, v[0]])));
+        if (err.field('status')) setFormError(err.field('status') ?? null);
+      } else setFormError(errorMessage(err));
+      setSaving(false);
+    }
+  };
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    void handle(() => onSubmit(form));
+  };
+
+  // the picker always shows the current teacher, even before the options have loaded
+  const teacherOptions = [...teachers];
+  if (initialTeacher && !teacherOptions.some((t) => t.uuid === initialTeacher.uuid))
+    teacherOptions.unshift(initialTeacher);
+
+  return (
+    <Modal open onClose={onClose} title={title} icon={icon}>
+      <form onSubmit={submit} className="space-y-3 text-xs" noValidate>
+        {formError ? (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700">
+            {formError}
+          </div>
+        ) : null}
+        <TextField
+          label="Class / Group Name *"
+          required
+          placeholder="e.g. Daycare Toddlers / Activity Wing"
+          value={form.name}
+          onChange={set('name')}
+          error={errors.name}
+        />
+        <SelectField
+          label="Class Teacher"
+          value={form.classTeacherUuid}
+          onChange={set('classTeacherUuid')}
+          error={errors.classTeacherUuid}
+        >
+          <option value="">To be assigned</option>
+          {teacherOptions.map((t) => (
+            <option key={t.uuid} value={t.uuid}>
+              {t.name}
+            </option>
+          ))}
+        </SelectField>
+        <div className="grid grid-cols-2 gap-3">
+          <TextField
+            label="Room"
+            placeholder="Room 101"
+            value={form.room}
+            onChange={set('room')}
+            error={errors.room}
+          />
+          <TextField
+            label="Capacity / Seats"
+            type="number"
+            min={0}
+            value={form.capacity}
+            onChange={set('capacity')}
+            error={errors.capacity}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <TextField
+            label="Starts at"
+            type="time"
+            value={form.startsAt}
+            onChange={set('startsAt')}
+            error={errors.startsAt}
+          />
+          <TextField
+            label="Ends at"
+            type="time"
+            value={form.endsAt}
+            onChange={set('endsAt')}
+            error={errors.endsAt}
+          />
+        </div>
+
+        {onDelete ? (
+          <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-[11px] text-gray-600">
+            {studentCount > 0 ? (
+              <span>This class has {studentCount} active students, so it cannot be deleted.</span>
+            ) : confirmDelete ? (
+              <span className="flex items-center justify-between gap-2">
+                <span>Delete this class for good?</span>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void handle(onDelete)}
+                  className="rounded-full bg-rose-600 px-3 py-1 font-semibold text-white hover:bg-rose-700"
+                >
+                  Yes, delete
+                </button>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="font-semibold text-rose-600 hover:underline"
+              >
+                Delete class
+              </button>
+            )}
+          </div>
+        ) : null}
+
+        <ModalActions>
+          <CancelButton onClick={onClose} />
+          <SubmitButton loading={saving} className="px-5 py-1.5 text-xs">
+            {submitLabel}
+          </SubmitButton>
+        </ModalActions>
+      </form>
+    </Modal>
   );
 }

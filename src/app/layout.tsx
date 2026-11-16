@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import type { ReactNode } from 'react';
 
 import { siteConfig } from '@/config/site';
+import { AuthProvider } from '@/providers/AuthProvider';
 
 // Tailwind first (declares the cascade layer order), then our SCSS.
 import '@/styles/tailwind.css';
@@ -28,7 +29,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className={inter.variable}>
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

@@ -5,6 +5,7 @@ import { Bell, Plus, Check } from 'lucide-react';
 import { Logo } from '@/components/common/Logo';
 import { RoleSwitcher } from '@/components/common/RoleSwitcher';
 import { NotificationsModal } from '@/components/common/NotificationsModal';
+import { paths } from '@/config/paths';
 
 interface Child {
   id: string;
@@ -29,7 +30,7 @@ export function ParentHeader() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-3 sm:px-6 lg:px-8">
           {/* Left: Brand Logo & Role Badge */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <Logo size="md" />
+            <Logo size="md" href={paths.parent.dashboard} />
             <RoleSwitcher currentRole="parent" />
           </div>
 
